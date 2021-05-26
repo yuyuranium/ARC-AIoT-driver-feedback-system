@@ -6,15 +6,21 @@
 #define SERIAL_BAUD 115200
 #define FRACTIONAL_BITS 5
 #define DEBOUNCE 200
-#define PIN_HIMAX_OUT 3
+#define PIN_HIMAX_OUT 2
+#define PIN_SD 5
 #define N_DATA 3
 
 #define STANDBY -1
 
 const uint8_t N_CLASS = 2;         // number of buttons
-const uint8_t BTN_PIN[N_CLASS] = {2, 5};
-const uint8_t LED_PIN[N_CLASS] = {7, 8};
-const char *CLASS_NAME[N_CLASS] = {"starting", "stoping"};
+const uint8_t BTN_PIN[N_CLASS] = {3, 4};  // moodify later
+const uint8_t LED_PIN[N_CLASS] = {8, 7};
+
+// choose the 2 classes we want to label
+const char *CLASS_NAME[N_CLASS] = {"0_idle", "1_cruise"};
+// const char *CLASS_NAME[N_CLASS] = {"2_start", "3_stop"};
+// const char *CLASS_NAME[N_CLASS] = {"4_turn_left", "5_turn_right"};
+
 unsigned long btn_trigger_time[N_CLASS] = {0, 0};
 
 const char *DATA_NAME[N_DATA] = {"ax", "ay", "az"};
@@ -28,7 +34,7 @@ void setup() {
   
   // Serial.begin(SERIAL_BAUD);
 
-  while (!SD.begin(4)) {
+  while (!SD.begin(PIN_SD)) {
     ;
   }
 

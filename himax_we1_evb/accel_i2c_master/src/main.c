@@ -17,6 +17,8 @@ hx_drv_gpio_config_t hal_led_r;
 // gpio to recieve arduino control signal
 hx_drv_gpio_config_t hal_gpio_arduino_in;
 
+const uint8_t kSamplingCycle = 25;
+
 inline int8_t float_to_fixed(float x) {
   return (int8_t)(round(x * (1 << FRACTIONAL_BITS)));
 }
@@ -65,6 +67,6 @@ int main(int argc, char *argv[]) {
       hal_gpio_set(&hal_led_r, GPIO_PIN_RESET);
     }
 
-		hal_delay_ms(45);
+		hal_delay_ms(kSamplingCycle);
 	}
 }
