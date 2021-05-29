@@ -13,13 +13,13 @@
 #define STANDBY -1
 
 const uint8_t N_CLASS = 2;         // number of buttons
-const uint8_t BTN_PIN[N_CLASS] = {3, 4};  // moodify later
-const uint8_t LED_PIN[N_CLASS] = {8, 7};
+const uint8_t BTN_PIN[N_CLASS] = {4, 3};  // moodify later
+const uint8_t LED_PIN[N_CLASS] = {7, 8};
 
 // choose the 2 classes we want to label
-const char *CLASS_NAME[N_CLASS] = {"0_idle", "1_cruise"};
-// const char *CLASS_NAME[N_CLASS] = {"2_start", "3_stop"};
-// const char *CLASS_NAME[N_CLASS] = {"4_turn_left", "5_turn_right"};
+// const char *CLASS_NAME[N_CLASS] = {"0_idle", "1_cruise"};
+const char *CLASS_NAME[N_CLASS] = {"2_start", "3_stop"};
+// const char *CLASS_NAME[N_CLASS] = {"4_left", "5_right"};
 
 unsigned long btn_trigger_time[N_CLASS] = {0, 0};
 
@@ -44,6 +44,7 @@ void setup() {
   digitalWrite(PIN_HIMAX_OUT, LOW);
 
   for (uint8_t i = 0; i < N_CLASS; ++i) {
+    Serial.println(CLASS_NAME[i]);
     pinMode(BTN_PIN[i], INPUT_PULLUP);
     pinMode(LED_PIN[i], OUTPUT);
     digitalWrite(LED_PIN[i], LOW);
