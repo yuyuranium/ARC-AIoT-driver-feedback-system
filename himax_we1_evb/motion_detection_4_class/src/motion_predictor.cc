@@ -1,22 +1,20 @@
 #include "hx_drv_tflm.h"
-#include "tensorflow/lite/micro/micro_error_reporter.h"
-
-#include "constants.h"
 #include "motion_predictor.h"
+#include "constants.h"
 #include <cstdio>
 
 namespace {
 // State for the averaging algorithm we're using.
 int8_t prediction_history[kMotionCount][kPredictionHistoryLength] = {0};
 int prediction_history_index = 0;
-int kDetectionThreshold = 0;
-char buf[80];
+int detectionThreshold = 0;
+int last_prediction = 0;
 }  // namespace
 
-void SetDetectionThreshold(tflite::ErrorReporter* error_reporter, float thresh, uint32_t zero_point, float scale) {
-  kDetectionThreshold = (int)(thresh / scale) + (int)zero_point;
-  sprintf(buf, "thresh: %d", kDetectionThreshold);
-  TF_LITE_REPORT_ERROR(error_reporter, buf);
+int SetDetectionThreshold(tflite::ErrorReporter* error_reporter,
+                          float confidence, uint32_t zero_point, float scale) {
+  detectionThreshold = (int)(confidence / scale) + (int)zero_point;
+  return detectionThreshold;
 }
 
 int8_t PredictMotion(tflite::ErrorReporter* error_reporter, int8_t *output) {
@@ -44,13 +42,11 @@ int8_t PredictMotion(tflite::ErrorReporter* error_reporter, int8_t *output) {
       max_predict_score = prediction_average;
     }
   }
-  sprintf(buf, "max: %d %d", max_predict_index, max_predict_score);
-  TF_LITE_REPORT_ERROR(error_reporter, buf);
 
-
-  if (max_predict_score > kDetectionThreshold) {
+  if (max_predict_score > detectionThreshold) {
+    last_prediction = max_predict_index;
     return max_predict_index;
   } else {
-    return kUnknownMotion;
+    return last_prediction;
   }
 }

@@ -6,7 +6,6 @@ constexpr uint8_t kIdleMotion = 0;
 constexpr uint8_t kCouriseMotion = 1;
 constexpr uint8_t kStartMotion = 2;
 constexpr uint8_t kStopMotion = 3;
-constexpr uint8_t kUnknownMotion = 4;
 
 constexpr float kDetectionThresholdConfidence = 0.3;
 constexpr int kPredictionHistoryLength = 50;

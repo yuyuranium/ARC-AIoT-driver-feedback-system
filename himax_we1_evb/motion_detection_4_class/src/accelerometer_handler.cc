@@ -1,7 +1,5 @@
 #include "accelerometer_handler.h"
-
 #include "hx_drv_tflm.h"
-
 #include <cstdio>
 
 namespace {
@@ -35,6 +33,9 @@ bool ReadAccelerometer(tflite::ErrorReporter* error_reporter,
   float x, y, z;
 
   available_count = hx_drv_accelerometer_available_count();				
+
+  if (available_count == 0) return false;
+
   for (int i = 0; i < available_count; ++i) {
     hx_drv_accelerometer_receive(&x, &y, &z);
     x *= 32.0f;  // Scale that we set at labeling time

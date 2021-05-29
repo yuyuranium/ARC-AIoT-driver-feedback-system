@@ -8,4 +8,4 @@ extern TfLiteStatus SetupI2c(tflite::ErrorReporter* error_reporter);
 extern bool I2cHandleOutput(tflite::ErrorReporter* error_reporter,
                             int8_t *output, int length);
 
-#endif
+#endif  // I2C_OUTPUT_HANDLER_H_

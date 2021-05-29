@@ -1,4 +1,5 @@
 #include "main_functions.h"
+#include "hx_drv_tflm.h"
 
 #include "accelerometer_handler.h"
 #include "constants.h"
@@ -63,7 +64,9 @@ void setup() {
   micro_op_resolver.AddReshape();
   micro_op_resolver.AddRelu();
   micro_op_resolver.AddMaxPool2D();
-  micro_op_resolver.AddSoftmax(); // Build an interpreter to run the model with.
+  micro_op_resolver.AddSoftmax();
+
+  // Build an interpreter to run the model with.
   static tflite::MicroInterpreter static_interpreter(
       model, micro_op_resolver, tensor_arena, kTensorArenaSize, error_reporter);
   interpreter = &static_interpreter;
@@ -75,16 +78,19 @@ void setup() {
     return;
   }
 
-  // Obtain pointer to the model's input tensor.
+  // Obtain pointer to the model's input/output tensor.
   model_input = interpreter->input(0);
   model_output = interpreter->output(0);
 
   input_length = model_input->bytes / sizeof(int8_t);
+  
   uint32_t zero_point = model_output->params.zero_point;
   float scale = model_output->params.scale;
 
-  SetDetectionThreshold(error_reporter, 0.0, zero_point, scale);
+  int detection_threshold = SetDetectionThreshold(
+      error_reporter, kDetectionThresholdConfidence, zero_point, scale);
 
+  // Initialize accelerometer and i2c bus.
   TfLiteStatus accel_setup_status = SetupAccelerometer(error_reporter);
   if (accel_setup_status != kTfLiteOk) {
     TF_LITE_REPORT_ERROR(error_reporter, "accel set up failed\n");
@@ -94,6 +100,9 @@ void setup() {
     TF_LITE_REPORT_ERROR(error_reporter, "i2c set up failed\n");
   }
 
+  sprintf(buf, "Starting inferencing with quantized detection threshold: %d",
+          detection_threshold);
+  TF_LITE_REPORT_ERROR(error_reporter, buf);
 }
 
 void loop() {
@@ -117,20 +126,18 @@ void loop() {
   sprintf(buf, "Predict: %d", index);
   TF_LITE_REPORT_ERROR(error_reporter, buf);
 
-
+  // The following code is to display the real value of inference output.
   // fog (int i = 0; i < 4; ++i) {
-  //   float tt = (model_output->data.int8[i] - zero_point) * scale;
-  //   int t = tt * 1000;
-  //   int ii = t / 1000;
-  //   int ff = t % 1000;
-  //   sprintf(buf, "[%d]: %d.%d", i, ii, ff);
+  //   float o = (model_output->data.int8[i] - zero_point) * scale;
+  //   int t = o * 1000;
+  //   int int_part = t / 1000;
+  //   int frac_part = t % 1000;
+  //   sprintf(buf, "[%d]: %d.%d", i, int_part, frac_part);
   //   TF_LITE_REPORT_ERROR(error_reporter, buf);
   // }
 
-  bool transmit_succeed = 
-      I2cHandleOutput(error_reporter, &index, 1);
+  bool transmit_succeed = I2cHandleOutput(error_reporter, &index, 1);
   if (!transmit_succeed) {
     TF_LITE_REPORT_ERROR(error_reporter, "Cannot transmit\n");
   }
-
 }
