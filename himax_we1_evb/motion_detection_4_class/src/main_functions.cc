@@ -3,6 +3,8 @@
 #include "accelerometer_handler.h"
 #include "constants.h"
 #include "motion_detection_4_class_model_data.h"
+#include "motion_predictor.h"
+#include "i2c_output_handler.h"
 
 #include "tensorflow/lite/micro/micro_error_reporter.h"
 #include "tensorflow/lite/micro/micro_interpreter.h"
@@ -48,9 +50,7 @@ void setup() {
     TF_LITE_REPORT_ERROR(error_reporter,
                          "Model provided is schema version %d not equal "
                          "to supported version %d.",
-                         model->version(), TFLITE_SCHEMA_VERSION);
-    return;
-  }
+                         model->version(), TFLITE_SCHEMA_VERSION); return; }
 
   // Pull in only the operation implementations we need.
   // This relies on a complete list of all the ops needed by this graph.
@@ -63,9 +63,7 @@ void setup() {
   micro_op_resolver.AddReshape();
   micro_op_resolver.AddRelu();
   micro_op_resolver.AddMaxPool2D();
-  micro_op_resolver.AddSoftmax();
-
-  // Build an interpreter to run the model with.
+  micro_op_resolver.AddSoftmax(); // Build an interpreter to run the model with.
   static tflite::MicroInterpreter static_interpreter(
       model, micro_op_resolver, tensor_arena, kTensorArenaSize, error_reporter);
   interpreter = &static_interpreter;
@@ -82,11 +80,20 @@ void setup() {
   model_output = interpreter->output(0);
 
   input_length = model_input->bytes / sizeof(int8_t);
+  uint32_t zero_point = model_output->params.zero_point;
+  float scale = model_output->params.scale;
 
-  TfLiteStatus setup_status = SetupAccelerometer(error_reporter);
-  if (setup_status != kTfLiteOk) {
-    TF_LITE_REPORT_ERROR(error_reporter, "Set up failed\n");
+  SetDetectionThreshold(error_reporter, 0.0, zero_point, scale);
+
+  TfLiteStatus accel_setup_status = SetupAccelerometer(error_reporter);
+  if (accel_setup_status != kTfLiteOk) {
+    TF_LITE_REPORT_ERROR(error_reporter, "accel set up failed\n");
   }
+  TfLiteStatus i2c_setup_status = SetupI2c(error_reporter);
+  if (i2c_setup_status != kTfLiteOk) {
+    TF_LITE_REPORT_ERROR(error_reporter, "i2c set up failed\n");
+  }
+
 }
 
 void loop() {
@@ -106,7 +113,24 @@ void loop() {
     return;
   }
 
-  float scale = output->params.scale;
-  uint32_t zero_point = output->params.zero_point;
+  int8_t index = PredictMotion(error_reporter, model_output->data.int8);
+  sprintf(buf, "Predict: %d", index);
+  TF_LITE_REPORT_ERROR(error_reporter, buf);
+
+
+  // fog (int i = 0; i < 4; ++i) {
+  //   float tt = (model_output->data.int8[i] - zero_point) * scale;
+  //   int t = tt * 1000;
+  //   int ii = t / 1000;
+  //   int ff = t % 1000;
+  //   sprintf(buf, "[%d]: %d.%d", i, ii, ff);
+  //   TF_LITE_REPORT_ERROR(error_reporter, buf);
+  // }
+
+  bool transmit_succeed = 
+      I2cHandleOutput(error_reporter, &index, 1);
+  if (!transmit_succeed) {
+    TF_LITE_REPORT_ERROR(error_reporter, "Cannot transmit\n");
+  }
 
 }
