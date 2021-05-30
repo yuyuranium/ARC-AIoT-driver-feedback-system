@@ -32,7 +32,7 @@ File data_entry;
 void setup() {
   state = STANDBY;
   
-  // Serial.begin(SERIAL_BAUD);
+  Serial.begin(SERIAL_BAUD);
 
   while (!SD.begin(PIN_SD)) {
     ;
@@ -79,8 +79,8 @@ void loop() {
           data_entry.print(',');
         }
         data_entry.println(DATA_NAME[N_DATA - 1]);
-        // Serial.print("Writing: ");
-        // Serial.println(filename);
+        Serial.print("Writing: ");
+        Serial.println(filename);
         state = i;
         digitalWrite(LED_PIN[state], HIGH);
         digitalWrite(PIN_HIMAX_OUT, HIGH);
@@ -94,7 +94,7 @@ void loop() {
       data_entry.flush();
       data_entry.close();
       state = -1;
-      // Serial.println("done");
+      Serial.println("done");
     }
   }
 }
@@ -107,6 +107,7 @@ void receiveEvent(int count) {
     z = Wire.read();
     char data_buff[80];
     sprintf(data_buff, "%d,%d,%d", x, y, z);
+    Serial.println(data_buff);
     if (data_entry)
       data_entry.println(data_buff);
   } else {
