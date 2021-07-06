@@ -56,3 +56,6 @@ dkms.conf
 
 # Training data
 *.csv
+
+# Vim config
+.vim/
