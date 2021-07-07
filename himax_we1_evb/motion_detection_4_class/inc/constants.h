@@ -7,7 +7,7 @@ constexpr uint8_t kCouriseMotion = 1;
 constexpr uint8_t kStartMotion = 2;
 constexpr uint8_t kStopMotion = 3;
 
-constexpr float kDetectionThresholdConfidence = 0.3;
-constexpr int kPredictionHistoryLength = 50;
+constexpr float kDetectionThresholdConfidence = 0.6;
+constexpr int kPredictionHistoryLength = 20;
 
 #endif  // CONSTANTS_H_
