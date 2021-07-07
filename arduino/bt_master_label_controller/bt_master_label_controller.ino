@@ -1,7 +1,8 @@
 #include <SoftwareSerial.h>
 
-const int kSerialBuad = 115200;
-const int kBTSerialBuad = 38400;
+#define SERIAL_BAUD 115200
+#define BTSERIAL_BAUD 38400
+
 const uint8_t kSeg = 7;
 const uint8_t kClass = 6;
 const char *kClassName[kClass] = { "IDLE", "CRUISE", "ACCEL", "BRAKE", "LEFT", "RIGHT" };
@@ -32,10 +33,10 @@ uint8_t roller = 0;
 SoftwareSerial BTSerial(11, 12);
 
 void setup() {
-  Serial.begin(kSerialBuad);
+  Serial.begin(SERIAL_BAUD);
 
   // bluetooth setup
-  BTSerial.begin(kBTSerialBuad);
+  BTSerial.begin(BTSERIAL_BAUD);
 
   // joystick setup
   pinMode(kJoyStickPinRx, INPUT);
