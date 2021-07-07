@@ -1,4 +1,3 @@
-#include <TimerOne.h>
 #include <SoftwareSerial.h>
 #include <Wire.h>
 #include <SPI.h>
@@ -37,10 +36,6 @@ inline float fixed_to_float(int8_t input) {
   return ((float)input / (float)(1 << kFractionalBits));
 }
 
-void updateLedsIsr() {
-  
-}
-
 void setup() {
   Serial.begin(SERIAL_BAUD);
 
@@ -67,8 +62,6 @@ void setup() {
     pinMode(kLedPinOut[i], OUTPUT);
     digitalWrite(kLedPinOut[i], LOW);
   }
-//  Timer1.initialize(100000);
-//  Timer1.attachInterrupt(updateLedsIsr);
 
   // initialize variables
   busy = false;
