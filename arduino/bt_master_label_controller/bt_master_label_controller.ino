@@ -93,7 +93,6 @@ void loop() {
         digitalWrite(kSegPinOut[i], LOW);
       }
       digitalWrite(kSegPinOut[kSeg - 1], HIGH);
-      delay(50);
     } else {
       BTSerial.print('s');
       Serial.println('s');
@@ -103,9 +102,9 @@ void loop() {
       digitalWrite(kSegPinOut[roller++], HIGH);
       if (roller == 6)
         roller = 0;
-      delay(50);
     }
   }
+  delay(50);
 }
 
 boolean debounce_sw() {
