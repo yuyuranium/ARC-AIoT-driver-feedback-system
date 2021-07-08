@@ -79,6 +79,7 @@ void loop() {
     val = BTSerial.read();
     if (busy) {
       if (val == 's') {
+        // disable himax, blow out the leds, write file and change state
         digitalWrite(kHimaxPinOut, LOW);
         digitalWrite(kLedPinOut[L], LOW);
         digitalWrite(kLedPinOut[R], LOW);
@@ -95,11 +96,11 @@ void loop() {
       }
     } else {
       if (val == 's') {
-        // The same
         busy = false;
       } else if (val == 'r') {
-        // TODO: regret, remove the latest file
+        // to avoid double clicking
         if (debounce_regret()) {
+          // on regret, find the file and delete it
           char filename[10];
           sprintf(filename, "%d.csv", file_counter - 1);
           if (SD.exists(filename)) {
@@ -108,7 +109,7 @@ void loop() {
             if (SD.remove(filename)) {
               --file_counter;
               Serial.println("Done");
-              // lit the led to indicate job done
+              // lit the led for 1 sec to indicate job done
               digitalWrite(kLedPinOut[L], HIGH);
               digitalWrite(kLedPinOut[R], HIGH);
               delay(1000);
@@ -145,7 +146,7 @@ void loop() {
 }
 
 void receiveEvent(int count) {
-  if (class_type != -1) {
+  if (busy) {
     for (int i = 0; i < (count >> 2); ++i) {
       ff f;
       for (int j = 0; j < 4; ++j) {
@@ -153,11 +154,12 @@ void receiveEvent(int count) {
         f.bytes[j] = b;
       }
       Serial.print(f.f_val, 5);
-      Serial.print(" ");
+      data_entry.print(f.f_val, 5);
+      Serial.print(",");
+      data_entry.print(",");
     }
-    Serial.println(" ");
-//    if (data_entry)
-//      data_entry.println(data_buff);
+    Serial.println(class_type);
+    data_entry.println(class_type);
     switch (class_type) {
       case 0:
         // blink 2
