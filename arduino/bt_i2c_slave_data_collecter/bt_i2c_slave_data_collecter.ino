@@ -10,7 +10,6 @@
 #define SERIAL_BAUD 115200
 #define BTSERIAL_BAUD 38400
 
-const int kFractionalBits = 5;
 const uint8_t kData = 7;  // ax, ay, az, jx, jy, jz, class
 const uint8_t kLed = 2;
 const uint8_t kHimaxPinOut = 2;
@@ -32,9 +31,10 @@ char val;  //儲存接受到的資料變數
 
 File data_entry;
 
-inline float fixed_to_float(int8_t input) {
-  return ((float)input / (float)(1 << kFractionalBits));
-}
+typedef union {
+  float f_val;
+  uint8_t bytes[sizeof(float)];
+} ff;
 
 void setup() {
   Serial.begin(SERIAL_BAUD);
@@ -146,24 +146,18 @@ void loop() {
 
 void receiveEvent(int count) {
   if (class_type != -1) {
-    int8_t ax, ay, az, jx, jy, jz;
-    ax = Wire.read();
-    ay = Wire.read();
-    az = Wire.read();
-    jx = Wire.read();
-    jy = Wire.read();
-    jz = Wire.read();
-    String data_buff = "";
-    data_buff += String(fixed_to_float(ax)) + ",";
-    data_buff += String(fixed_to_float(ay)) + ",";
-    data_buff += String(fixed_to_float(az)) + ",";
-    data_buff += String(fixed_to_float(jx)) + ",";
-    data_buff += String(fixed_to_float(jy)) + ",";
-    data_buff += String(fixed_to_float(jz)) + ",";
-    data_buff += String(class_type);
-    // Serial.println(data_buff);
-    if (data_entry)
-      data_entry.println(data_buff);
+    for (int i = 0; i < (count >> 2); ++i) {
+      ff f;
+      for (int j = 0; j < 4; ++j) {
+        unsigned char b = Wire.read();
+        f.bytes[j] = b;
+      }
+      Serial.print(f.f_val, 5);
+      Serial.print(" ");
+    }
+    Serial.println(" ");
+//    if (data_entry)
+//      data_entry.println(data_buff);
     switch (class_type) {
       case 0:
         // blink 2
