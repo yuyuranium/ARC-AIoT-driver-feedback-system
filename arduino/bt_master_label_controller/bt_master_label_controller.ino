@@ -6,7 +6,7 @@
 const uint8_t kSeg = 7;
 const uint8_t kClass = 6;
 const char *kClassName[kClass] = { "IDLE", "CRUISE", "ACCEL", "BRAKE", "LEFT", "RIGHT" };
-const uint8_t kSegPinOut[kSeg] = { 3, 2, 6, 7, 8, 4, 5 };  // a, b, c, d, e, f, g
+const uint8_t kSegPinOut[kSeg] = { 8, 9, 3, 2, 4, 6, 5 };  // a, b, c, d, e, f, g
 const uint8_t kSegOut[kClass][kSeg] = {
   { 1, 1, 1, 1, 1, 1, 0 },
   { 0, 1, 1, 0, 0, 0, 0 },
@@ -15,11 +15,11 @@ const uint8_t kSegOut[kClass][kSeg] = {
   { 0, 1, 1, 0, 0, 1, 1 },
   { 1, 0, 1, 1, 0, 1, 1 },
 };
-const uint8_t kJoyStickPinRx = A3;
-const uint8_t kJoyStickPinRy = A2;
-const uint8_t kJoyStickPinSw = A1;
-const uint8_t kSwitchPin = 9;
-const uint8_t kButtonPin = A0;
+const uint8_t kJoyStickPinRx = A0;
+const uint8_t kJoyStickPinRy = A1;
+const uint8_t kJoyStickPinSw = 12;
+const uint8_t kSwitchPin = 10;
+const uint8_t kButtonPin = 7;
 
 const unsigned long kDebounceDuration = 200;  // 200 ms
 unsigned long sw_trigger_time;
@@ -30,7 +30,7 @@ const int lower_thresh = 20;
 
 uint8_t roller = 0;
 
-SoftwareSerial BTSerial(11, 12);
+SoftwareSerial BTSerial(A2, A3);
 
 void setup() {
   Serial.begin(SERIAL_BAUD);
