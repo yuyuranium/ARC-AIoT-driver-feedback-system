@@ -15,8 +15,8 @@ const uint8_t kSegOut[kClass][kSeg] = {
   { 0, 1, 1, 0, 0, 1, 1 },
   { 1, 0, 1, 1, 0, 1, 1 },
 };
-const uint8_t kJoyStickPinRx = A0;
-const uint8_t kJoyStickPinRy = A1;
+const uint8_t kJoyStickPinRx = A1;
+const uint8_t kJoyStickPinRy = A0;
 const uint8_t kJoyStickPinSw = 12;
 const uint8_t kSwitchPin = 10;
 const uint8_t kButtonPin = 7;
@@ -29,6 +29,9 @@ const int upper_thresh = 1000;
 const int lower_thresh = 20;
 
 uint8_t roller = 0;
+
+int8_t class_type = 0;
+boolean is_ready = false;
 
 SoftwareSerial BTSerial(A2, A3);
 
@@ -63,42 +66,85 @@ void loop() {
     int sw = digitalRead(kJoyStickPinSw);
     int rx = analogRead(kJoyStickPinRx);
     int ry = analogRead(kJoyStickPinRy);
-    int type = 0;
-    if (sw) {
-      if (rx > upper_thresh) {
-        type = 5;
-      } else if (rx < lower_thresh) {
-        type = 4;
-      } else if (ry > upper_thresh) {
-        type = 3;
-      } else if (ry < lower_thresh) {
-        type = 2;
-      } else {
-        type = 1;
-      }
-    } else {
-      type = 0;
+    if (sw == LOW) {
+      class_type = 0;
+    }
+    switch (class_type) {
+      case -1:
+        class_type = (sw)? 1 : 0;
+        break;
+      case 0:
+        if (rx > 1000)
+          class_type = 2;
+        break;
+      case 1:
+        // accel and brake has higher priority so need not exam if joystick is centered
+        if (rx > 1000) {
+          class_type = 2;
+        } else if (rx < 20) {
+          class_type = 3;
+        } else if (rx < 600 && rx > 400) {
+          // only when controller is placed middle will it trigger left or right
+          if (ry > 1000) {
+            class_type = 5;
+          } else if (ry < 20) {
+            class_type = 4;
+          }
+        }
+        break;
+      case 2:
+      case 3:
+        if (rx < 600 && rx > 400) {
+          // only when controller is placed middle will it trigger left or right
+          if (ry > 1000) {
+            class_type = 5;
+          } else if (ry < 20) {
+            class_type = 4;
+          } else {
+            class_type = 1;
+          }
+        }
+        break;
+      case 4:
+      case 5:
+        if (ry < 600 && ry > 400) {
+          // only when controller is placed middle will it trigger left or right
+          if (rx > 1000) {
+            class_type = 2;
+          } else if (ry < 20) {
+            class_type = 3;
+          } else {
+            class_type = 1;
+          }
+        }
+      default:
+        break;
     }
     for (int i = 0; i < kSeg; ++i) {
-      digitalWrite(kSegPinOut[i], kSegOut[type][i]);
+      digitalWrite(kSegPinOut[i], kSegOut[class_type][i]);
     }
-    BTSerial.print(type);
-    Serial.println(type);
+    BTSerial.print(class_type);
+    Serial.println(class_type);
   } else {
+    class_type = -1;
     boolean regret = !digitalRead(kButtonPin);
     if (regret && debounce_btn) {
+      // on regret
       BTSerial.print('r');
       Serial.println('r');
       for (int i = 0; i < kSeg; ++i) {
         digitalWrite(kSegPinOut[i], LOW);
       }
+      // show a dash on seven seg
       digitalWrite(kSegPinOut[kSeg - 1], HIGH);
     } else {
+      // standby
       BTSerial.print('s');
       Serial.println('s');
       for (int i = 0; i < kSeg; ++i) {
         digitalWrite(kSegPinOut[i], LOW);
       }
+      // roll the seven seg
       digitalWrite(kSegPinOut[roller++], HIGH);
       if (roller == 6)
         roller = 0;
