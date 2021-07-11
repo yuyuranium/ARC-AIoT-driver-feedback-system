@@ -5,7 +5,7 @@ import sys
 
 i = int(sys.argv[1])
 
-cc = ['k', 'g', 'b', 'r', 'm', 'y']
+cc = ['k', 'b', 'g', 'r', 'm', 'y']
 
 
 def press(event):
