@@ -6,49 +6,37 @@
 #define SLAVE_ADDRESS 0x12
 #define L 0
 #define R 1
-
 #define SERIAL_BAUD 115200
 #define BTSERIAL_BAUD 38400
 
 const uint8_t kData = 7;  // ax, ay, az, jx, jy, jz, class
-const uint8_t kLed = 2;
+const uint8_t kLeds = 2;
 const uint8_t kHimaxPinOut = 2;
 const uint8_t kSdPinOut = 5;
-const uint8_t kLedPinOut[kLed] = { 7, 8 };
-
+const uint8_t kLedPinOut[kLeds] = { 7, 8 };
 const unsigned long kDebounceDuration = 2000;  // 2 s
-unsigned long regret_trigger_time;
-
 const char *kDataName[kData] = { "ax", "ay", "az", "jx", "jy", "jz", "class" };
 
+unsigned long regret_trigger_time;
 uint8_t class_type;
 uint8_t file_counter;
-
 boolean busy;
+char val;
 
-SoftwareSerial BTSerial(A2, A3); // 宣告10腳位為Arduino的RX 、11為Arduino的 TX
-char val;  //儲存接受到的資料變數
-
+SoftwareSerial BTSerial(A2, A3);
 File data_entry;
 
 typedef union {
   float f_val;
   uint8_t bytes[sizeof(float)];
-} ff;
+} floatData;
 
 void setup() {
   Serial.begin(SERIAL_BAUD);
 
   // bluetooth setup
   BTSerial.begin(BTSERIAL_BAUD);
-
-  // SD card setup
-  while (!SD.begin(kSdPinOut)) {
-    ;
-  }
-
-  delay(200);
-
+  
   // himax eable setup
   pinMode(kHimaxPinOut, OUTPUT);
   digitalWrite(kHimaxPinOut, LOW);
@@ -58,10 +46,21 @@ void setup() {
   Wire.onReceive(receiveEvent);
 
   // led setup
-  for (int i = 0; i < kLed; ++i) {
-    pinMode(kLedPinOut[i], OUTPUT);
-    digitalWrite(kLedPinOut[i], LOW);
+  pinMode(kLedPinOut[L], OUTPUT);
+  pinMode(kLedPinOut[R], OUTPUT);
+  digitalWrite(kLedPinOut[L], LOW);
+  digitalWrite(kLedPinOut[R], LOW);
+
+  // SD card setup
+  while (!SD.begin(kSdPinOut)) {
+    // slowly blink 2 leds to indicate sd card error
+    // wait until no error
+    digitalWrite(kLedPinOut[L], !digitalRead(kLedPinOut[R]));  // sync with R
+    digitalWrite(kLedPinOut[R], !digitalRead(kLedPinOut[R]));
+    delay(500);
   }
+
+  delay(200);
 
   // initialize variables
   busy = false;
@@ -72,6 +71,8 @@ void setup() {
     sprintf(filename, "%d.csv", ++file_counter);
   } while (SD.exists(filename));  // initialize file_counter with latest file count
   regret_trigger_time = millis();
+  digitalWrite(kLedPinOut[L], LOW);
+  digitalWrite(kLedPinOut[R], LOW);
 }
 
 void loop() {
@@ -88,44 +89,37 @@ void loop() {
         class_type = -1;
         busy = false;
         Serial.println("Done");
-      } else if (val == 'r') {
-        // Cannot happen
-      } else {
-        if (val <= '5' && val >= '0')
-          class_type = val - '0';
+      } else if (val <= '5' && val >= '0') {
+        // reading class type, convert char to int
+        class_type = val - '0';
       }
     } else {
       if (val == 's') {
-        busy = false;
-      } else if (val == 'r') {
+        busy = false;  // remain the same
+      } else if (val == 'r' && debounce_regret()) {
         // to avoid double clicking
-        if (debounce_regret()) {
-          // on regret, find the file and delete it
-          char filename[10];
-          sprintf(filename, "%d.csv", file_counter - 1);
-          if (SD.exists(filename)) {
-            Serial.print("Deleting: ");
-            Serial.println(filename);
-            if (SD.remove(filename)) {
-              --file_counter;
-              Serial.println("Done");
-              // lit the led for 1 sec to indicate job done
-              digitalWrite(kLedPinOut[L], HIGH);
-              digitalWrite(kLedPinOut[R], HIGH);
-              delay(1000);
-              digitalWrite(kLedPinOut[L], LOW);
-              digitalWrite(kLedPinOut[R], LOW);
-            }
-          } else {
-            // fast blink 2 times to indicate error
-            for (int i = 0; i < 4; ++i) {
-              digitalWrite(kLedPinOut[L], !digitalRead(kLedPinOut[R]));  // sync with R
-              digitalWrite(kLedPinOut[R], !digitalRead(kLedPinOut[R]));
-              delay(100);
-            }
+        // on regret, find the file and delete it
+        char filename[10];
+        sprintf(filename, "%d.csv", file_counter - 1);
+        if (SD.exists(filename) && SD.remove(filename)) {
+          Serial.print("Deleting: ");
+          Serial.println(filename);
+          --file_counter;
+          // lit the led for 1 sec to indicate job done
+          digitalWrite(kLedPinOut[L], HIGH);
+          digitalWrite(kLedPinOut[R], HIGH);
+          delay(1000);
+          digitalWrite(kLedPinOut[L], LOW);
+          digitalWrite(kLedPinOut[R], LOW);
+        } else {
+          // fast blink 2 times to indicate error
+          for (int i = 0; i < 4; ++i) {
+            digitalWrite(kLedPinOut[L], !digitalRead(kLedPinOut[R]));  // sync with R
+            digitalWrite(kLedPinOut[R], !digitalRead(kLedPinOut[R]));
+            delay(100);
           }
         }
-      } else {
+      } else if (val <= '5' && val >= '0') {
         char filename[10];
         sprintf(filename, "%d.csv", file_counter++);
         data_entry = SD.open(filename, FILE_WRITE);
@@ -147,19 +141,22 @@ void loop() {
 
 void receiveEvent(int count) {
   if (busy) {
+    // one float data has 4 bytes, so there are 'count / 4' float data
     for (int i = 0; i < (count >> 2); ++i) {
-      ff f;
+      floatData data;
+      // for each byte, put them is place and take them out as float
       for (int j = 0; j < 4; ++j) {
         unsigned char b = Wire.read();
-        f.bytes[j] = b;
+        data.bytes[j] = b;
       }
-      Serial.print(f.f_val, 5);
-      data_entry.print(f.f_val, 5);
+      Serial.print(data.f_val, 5);
+      data_entry.print(data.f_val, 5);
       Serial.print(",");
       data_entry.print(",");
     }
     Serial.println(class_type);
     data_entry.println(class_type);
+    // update leds
     switch (class_type) {
       case 0:
         // blink 2
@@ -194,11 +191,13 @@ void receiveEvent(int count) {
         break;
     }
   } else {
+    // this should not happen, but just consume all unnecessary data in case it fails
     while (Wire.available())
       Wire.read();
   }
 }
 
+// to avoid double regret too quickly
 boolean debounce_regret() {
   unsigned long now = millis();
   if (now - regret_trigger_time > kDebounceDuration) {
