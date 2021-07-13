@@ -51,7 +51,9 @@ void setup() {
     TF_LITE_REPORT_ERROR(error_reporter,
                          "Model provided is schema version %d not equal "
                          "to supported version %d.",
-                         model->version(), TFLITE_SCHEMA_VERSION); return; }
+                         model->version(), TFLITE_SCHEMA_VERSION);
+    return;
+  }
 
   // Pull in only the operation implementations we need.
   // This relies on a complete list of all the ops needed by this graph.
