@@ -6,7 +6,7 @@
 namespace {
 // Beta of LPF
 const float kLPFBeta = 0.25;
-// Sampling specifications
+// Sampling parameters
 const float kSamplingPeriod = 0.04;
 const uint32_t kClkRate = 400000000;
 const uint32_t kSamplingCycle = kSamplingPeriod*kClkRate;
@@ -69,7 +69,7 @@ bool ReadAccelerometer(tflite::ErrorReporter *error_reporter, int8_t *input,
   accel[Z] = accel[Z] - (kLPFBeta * (accel[Z] - raw_az));
 
   // calculating jerk of x, y, z
-  float dt = (float)(tick_now - tick_last) / (float)kClkRate;
+  const float dt = (float)(tick_now - tick_last) / (float)kClkRate;
   jerk[X] = (accel[X] - accel_last[X]) / dt;
   jerk[Y] = (accel[Y] - accel_last[Y]) / dt;
   jerk[Z] = (accel[Z] - accel_last[Z]) / dt;

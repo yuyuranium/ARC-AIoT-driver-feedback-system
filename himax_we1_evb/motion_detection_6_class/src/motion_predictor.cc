@@ -47,6 +47,6 @@ int8_t PredictMotion(tflite::ErrorReporter* error_reporter, int8_t *output) {
     last_prediction = max_predict_index;
     return max_predict_index;
   } else {
-    return last_prediction;
+    return -1;
   }
 }

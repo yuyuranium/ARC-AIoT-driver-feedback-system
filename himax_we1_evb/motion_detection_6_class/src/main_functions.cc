@@ -33,6 +33,14 @@ alignas(16) static uint8_t tensor_arena[kTensorArenaSize] __attribute__((section
 static uint8_t tensor_arena[kTensorArenaSize];
 #pragma Bss()
 #endif // if defined (_GNUC_) && !defined (_CCAC_)
+
+// To transmit floating point numbers through I2C, decoupling ieee754 format to
+// four bytes using union
+typedef union {
+  float f_val;
+  uint8_t bytes[sizeof(float)];
+} floatData;
+
 }  // namespace
   
 char buf[100];
@@ -83,26 +91,13 @@ void setup() {
     TF_LITE_REPORT_ERROR(error_reporter, "AllocateTensors() failed");
     return;
   }
+  TF_LITE_REPORT_ERROR(error_reporter, "here");
 
   // Obtain pointer to the model's input/output tensor.
-  // model_input = interpreter->input(0);
-  // model_output = interpreter->output(0);
+  model_input = interpreter->input(0);
+  model_output = interpreter->output(0);
 
   input_length = model_input->bytes / sizeof(int8_t);
-
-  sprintf(buf, "input_length: %d\n", input_length);
-  TF_LITE_REPORT_ERROR(error_reporter, buf);
-  
-  // uint32_t zero_point = model_output->params.zero_point;
-  // float scale = model_output->params.scale;
-
-  // int32_t ib = scale * 10000;
-  // int32_t ii = ib / 10000;
-  // int32_t ff = ib % 10000;
-
-  // hx_drv_uart_print("zero: %d, scale: %d.%d\n", zero_point, ii, ff);
-  // sprintf(buf, "zero: %ld, scale: %ld.%03ld\n", zero_point, ii, ff);
-  // TF_LITE_REPORT_ERROR(error_reporter, buf);
 
   int detection_threshold = SetDetectionThreshold(
       error_reporter, kDetectionThresholdConfidence,
@@ -115,12 +110,11 @@ void setup() {
   if (accel_setup_status != kTfLiteOk) {
     TF_LITE_REPORT_ERROR(error_reporter, "accel set up failed\n");
   }
-  /*
-  TfLiteStatus i2c_setup_status = SetupI2c(error_reporter);
+
+  TfLiteStatus i2c_setup_status = SetupI2C(error_reporter);
   if (i2c_setup_status != kTfLiteOk) {
     TF_LITE_REPORT_ERROR(error_reporter, "i2c set up failed\n");
   }
-  */
 
   sprintf(buf, "Starting inferencing with quantized detection threshold: %d",
           detection_threshold);
@@ -142,27 +136,34 @@ void loop() {
     return;
   }
 
-  /*
   int8_t index = PredictMotion(error_reporter, model_output->data.int8);
   sprintf(buf, "Predict: %d", index);
   TF_LITE_REPORT_ERROR(error_reporter, buf);
-  */
 
   // The following code is to display the real value of inference output.
-  for (int i = 0; i < 6; ++i) {
-    float o = (model_output->data.int8[i] - model_output->params.zero_point) * model_output->params.scale;
-    int t = o * 1000;
-    int int_part = t / 1000;
-    int frac_part = t % 1000;
-    sprintf(buf, "[%d]: %d.%d", i, int_part, frac_part);
-    TF_LITE_REPORT_ERROR(error_reporter, buf);
-  }
-  TF_LITE_REPORT_ERROR(error_reporter, "\r");
+  // for (int i = 0; i < 6; ++i) {
+  //   float o = (model_output->data.int8[i] - model_output->params.zero_point) * model_output->params.scale;
+  //   int t = o * 1000;
+  //   int int_part = t / 1000;
+  //   int frac_part = t % 1000;
+  //   sprintf(buf, "[%d]: %d.%d", i, int_part, frac_part);
+  //   TF_LITE_REPORT_ERROR(error_reporter, buf);
+  // }
+  // TF_LITE_REPORT_ERROR(error_reporter, "\r");
 
-  /*
-  bool transmit_succeed = I2cHandleOutput(error_reporter, &index, 1);
-  if (!transmit_succeed) {
+  // int8_t data_buf[kMotionCount * sizeof(float)];
+  // for (int i = 0; i < 6; ++i) {
+  //   floatData ff;
+  //   ff.f_val = (model_output->data.int8[i] - model_output->params.zero_point) *
+  //       model_output->params.scale;
+  //   data_buf[i * 4 + 0] = ff.bytes[0];
+  //   data_buf[i * 4 + 1] = ff.bytes[1];
+  //   data_buf[i * 4 + 2] = ff.bytes[2];
+  //   data_buf[i * 4 + 3] = ff.bytes[3];
+  // }
+
+  TfLiteStatus transmit_status = I2CSendOutput(error_reporter, &index, 1);
+  if (transmit_status != kTfLiteOk) {
     TF_LITE_REPORT_ERROR(error_reporter, "Cannot transmit\n");
   }
-  */
 }
