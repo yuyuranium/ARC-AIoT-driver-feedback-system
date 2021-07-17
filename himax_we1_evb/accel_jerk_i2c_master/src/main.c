@@ -1,5 +1,4 @@
 #include "hx_drv_tflm.h"
-#include "synopsys_wei_delay.h"
 #include "synopsys_wei_gpio.h"
 
 #include "stdio.h"
