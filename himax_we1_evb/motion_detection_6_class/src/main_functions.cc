@@ -2,7 +2,7 @@
 #include "hx_drv_tflm.h"
 
 #include "accelerometer_handler.h"
-#include "model.h"
+#include "classifier_model.h"
 #include "constants.h"
 #include "motion_predictor.h"
 #include "i2c_output_handler.h"
