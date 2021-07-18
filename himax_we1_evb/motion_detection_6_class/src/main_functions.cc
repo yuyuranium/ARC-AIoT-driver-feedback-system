@@ -3,6 +3,7 @@
 
 #include "accelerometer_handler.h"
 #include "classifier_model.h"
+#include "predictor_model.h"
 #include "constants.h"
 #include "motion_predictor.h"
 #include "i2c_output_handler.h"
@@ -15,11 +16,15 @@
 
 // Globals, used for compatibility with Arduino-style sketches.
 namespace {
-tflite::ErrorReporter* error_reporter = nullptr;
-const tflite::Model* model = nullptr;
-tflite::MicroInterpreter* interpreter = nullptr;
-TfLiteTensor *model_input = nullptr;
-TfLiteTensor *model_output = nullptr;
+tflite::ErrorReporter *error_reporter = nullptr;
+const tflite::Model *classifier = nullptr;
+tflite::MicroInterpreter *classifier_interpreter = nullptr;
+TfLiteTensor *classifier_input = nullptr;
+TfLiteTensor *classifier_output = nullptr;
+const tflite::Model *predictor = nullptr;
+tflite::MicroInterpreter *predictor_interpreter = nullptr;
+TfLiteTensor *predictor_input = nullptr;
+TfLiteTensor *predictor_output = nullptr;
 int input_length;
 
 // Create an area of memory to use for input, output, and intermediate arrays.
@@ -54,12 +59,20 @@ void setup() {
 
   // Map the model into a usable data structure. This doesn't involve any
   // copying or parsing, it's a very lightweight operation.
-  model = tflite::GetModel(classifier_tflite);
-  if (model->version() != TFLITE_SCHEMA_VERSION) {
+  classifier = tflite::GetModel(classifier_tflite);
+  if (classifier->version() != TFLITE_SCHEMA_VERSION) {
     TF_LITE_REPORT_ERROR(error_reporter,
                          "Model provided is schema version %d not equal "
                          "to supported version %d.",
-                         model->version(), TFLITE_SCHEMA_VERSION);
+                         classifier->version(), TFLITE_SCHEMA_VERSION);
+    return;
+  }
+  predictor = tflite::GetModel(predictor_tflite);
+  if (predictor->version() != TFLITE_SCHEMA_VERSION) {
+    TF_LITE_REPORT_ERROR(error_reporter,
+                         "Model provided is schema version %d not equal "
+                         "to supported version %d.",
+                         predictor->version(), TFLITE_SCHEMA_VERSION);
     return;
   }
 
@@ -68,25 +81,37 @@ void setup() {
   // An easier approach is to just use the AllOpsResolver, but this will
   // incur some penalty in code space for op implementations that are not
   // needed by this graph.
-  static tflite::MicroMutableOpResolver<10> micro_op_resolver;  // NOLINT
-  micro_op_resolver.AddConv2D();
-  micro_op_resolver.AddMaxPool2D();
-  micro_op_resolver.AddFullyConnected();
-  micro_op_resolver.AddConcatenation();
-  micro_op_resolver.AddMul();
-  micro_op_resolver.AddAdd();
-  micro_op_resolver.AddMean();
-  micro_op_resolver.AddReshape();
-  micro_op_resolver.AddRelu();
-  micro_op_resolver.AddSoftmax();
+  static tflite::MicroMutableOpResolver<10> classifier_op_resolver;  // NOLINT
+  classifier_op_resolver.AddConv2D();
+  classifier_op_resolver.AddMaxPool2D();
+  classifier_op_resolver.AddFullyConnected();
+  classifier_op_resolver.AddConcatenation();
+  classifier_op_resolver.AddMul();
+  classifier_op_resolver.AddAdd();
+  classifier_op_resolver.AddMean();
+  classifier_op_resolver.AddReshape();
+  classifier_op_resolver.AddRelu();
+  classifier_op_resolver.AddSoftmax();
+
+  static tflite::MicroMutableOpResolver<4> predictor_op_resolver;  // NOLINT
+  predictor_op_resolver.AddReshape();
+  predictor_op_resolver.AddConv2D();
+  predictor_op_resolver.AddMaxPool2D();
+  predictor_op_resolver.AddFullyConnected();
 
   // Build an interpreter to run the model with.
-  static tflite::MicroInterpreter static_interpreter(
-      model, micro_op_resolver, tensor_arena, kTensorArenaSize, error_reporter);
-  interpreter = &static_interpreter;
+  static tflite::MicroInterpreter static_classifier_interpreter(
+      classifier, classifier_op_resolver, tensor_arena, kTensorArenaSize,
+      error_reporter);
+  classifier_interpreter = &static_classifier_interpreter;
+
+  static tflite::MicroInterpreter static_predictor_interpreter(
+      predictor, predictor_op_resolver, tensor_arena, kTensorArenaSize,
+      error_reporter);
+  predictor_interpreter = &static_predictor_interpreter;
 
   // Allocate memory from the tensor_arena for the model's tensors.
-  TfLiteStatus allocate_status = interpreter->AllocateTensors();
+  TfLiteStatus allocate_status = classifier_interpreter->AllocateTensors();
   if (allocate_status != kTfLiteOk) {
     TF_LITE_REPORT_ERROR(error_reporter, "AllocateTensors() failed");
     return;
@@ -94,19 +119,21 @@ void setup() {
   TF_LITE_REPORT_ERROR(error_reporter, "here");
 
   // Obtain pointer to the model's input/output tensor.
-  model_input = interpreter->input(0);
-  model_output = interpreter->output(0);
+  classifier_input = classifier_interpreter->input(0);
+  classifier_output = classifier_interpreter->output(0);
+  predictor_input = predictor_interpreter->input(0);
+  predictor_output = predictor_interpreter->output(0);
 
-  input_length = model_input->bytes / sizeof(int8_t);
+  input_length = classifier_input->bytes / sizeof(int8_t);
 
   int detection_threshold = SetDetectionThreshold(
       error_reporter, kDetectionThresholdConfidence,
-      model_output->params.zero_point, model_output->params.scale);
+      classifier_output->params.zero_point, classifier_output->params.scale);
 
   // Initialize accelerometer and i2c bus.
   TfLiteStatus accel_setup_status = SetupAccelerometer(
       error_reporter,
-      model_input->params.zero_point, model_input->params.scale);
+      classifier_input->params.zero_point, classifier_input->params.scale);
   if (accel_setup_status != kTfLiteOk) {
     TF_LITE_REPORT_ERROR(error_reporter, "accel set up failed\n");
   }
@@ -124,19 +151,19 @@ void setup() {
 void loop() {
   // Attempt to read new data from the accelerometer.
   bool got_data = ReadAccelerometer(error_reporter,
-                                    model_input->data.int8,
+                                    classifier_input->data.int8,
                                     input_length);
   // If there was no new data, wait until next time.
   if (!got_data) return;
 
   // Run inference, and report any error.
-  TfLiteStatus invoke_status = interpreter->Invoke();
+  TfLiteStatus invoke_status = classifier_interpreter->Invoke();
   if (invoke_status != kTfLiteOk) {
     TF_LITE_REPORT_ERROR(error_reporter, "Invoke failed\n");
     return;
   }
 
-  int8_t index = PredictMotion(error_reporter, model_output->data.int8);
+  int8_t index = PredictMotion(error_reporter, classifier_output->data.int8);
   sprintf(buf, "Predict: %d", index);
   TF_LITE_REPORT_ERROR(error_reporter, buf);
 
