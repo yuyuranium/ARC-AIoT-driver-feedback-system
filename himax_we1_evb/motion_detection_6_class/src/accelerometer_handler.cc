@@ -12,26 +12,30 @@ const uint32_t kClkRate = 400000000;
 const uint32_t kSamplingCycle = kSamplingPeriod*kClkRate;
 // Ring buffer size
 constexpr int kRingBufferSize = 180;  // 6 * 60
-// Ring buffer
-int8_t ring_buffer[kRingBufferSize] = {0};
+// Ring buffers for both models
+int8_t ring_buffer_c[kRingBufferSize] = {0};
+int8_t ring_buffer_p[kRingBufferSize] = {0};
 // Available data count in accelerometer FIFO
 int available_count = 0;
 // The head of the ring buffer
 int begin_index;
 // Raw data of accelerometer
-float raw_ax, raw_ay, raw_az;
-// Timer
+float raw_ax, raw_ay, raw_az; // Timer
 uint32_t tick_now, tick_last;
 // Float data of accel and jerk
 float accel[3], accel_last[3], jerk[3];
-// Quantization parameters
-int32_t zero_point;
-float scale;
-
+// Quantization parameters of both models' input
+int32_t zero_point_c;
+int32_t zero_point_p;
+float scale_c;
+float scale_p;
 }  // namespace
 
 TfLiteStatus SetupAccelerometer(tflite::ErrorReporter *error_reporter,
-                                int32_t input_zero_point, float input_scale) {
+                                int32_t input_zero_point_c,
+                                float input_scale_c,
+                                int32_t input_zero_point_p,
+                                float input_scale_p) {
   TF_LITE_REPORT_ERROR(error_reporter, "setting up acclerometer");
   if (hx_drv_accelerometer_initial() != HX_DRV_LIB_PASS) {
     TF_LITE_REPORT_ERROR(error_reporter, "setup fail");
@@ -39,16 +43,18 @@ TfLiteStatus SetupAccelerometer(tflite::ErrorReporter *error_reporter,
   }
 
   // setting up quantization parameters
-  zero_point = input_zero_point;
-  scale = input_scale;
+  zero_point_c = input_zero_point_c;
+  scale_c = input_scale_c;
+  zero_point_p = input_zero_point_p;
+  scale_p = input_scale_p;
   // begin with position 0 of buffer
   begin_index = 0;
   TF_LITE_REPORT_ERROR(error_reporter, "setup done");
   return kTfLiteOk;
 }
 
-bool ReadAccelerometer(tflite::ErrorReporter *error_reporter, int8_t *input,
-                       int length) {
+bool ReadAccelerometer(tflite::ErrorReporter *error_reporter,
+                       int8_t *input_c, int8_t *input_p, int length) {
   available_count = hx_drv_accelerometer_available_count();				
 
   for (int i = 0; i < available_count; ++i) {
@@ -83,19 +89,32 @@ bool ReadAccelerometer(tflite::ErrorReporter *error_reporter, int8_t *input,
   const float norm_jz = (jerk[Z] - kJerkMean[Z]) / kJerkStd[Z];
 
   // quantization of data
-  const int8_t quant_ax = ((int8_t)(norm_ax / scale)) + (int8_t)zero_point;
-  const int8_t quant_ay = ((int8_t)(norm_ay / scale)) + (int8_t)zero_point;
-  const int8_t quant_az = ((int8_t)(norm_az / scale)) + (int8_t)zero_point;
-  const int8_t quant_jx = ((int8_t)(norm_jx / scale)) + (int8_t)zero_point;
-  const int8_t quant_jy = ((int8_t)(norm_jy / scale)) + (int8_t)zero_point;
-  const int8_t quant_jz = ((int8_t)(norm_jz / scale)) + (int8_t)zero_point;
+  const int8_t quant_ax_c = (int8_t)(norm_ax / scale_c) + (int8_t)zero_point_c;
+  const int8_t quant_ay_c = (int8_t)(norm_ay / scale_c) + (int8_t)zero_point_c;
+  const int8_t quant_az_c = (int8_t)(norm_az / scale_c) + (int8_t)zero_point_c;
+  const int8_t quant_jx_c = (int8_t)(norm_jx / scale_c) + (int8_t)zero_point_c;
+  const int8_t quant_jy_c = (int8_t)(norm_jy / scale_c) + (int8_t)zero_point_c;
+  const int8_t quant_jz_c = (int8_t)(norm_jz / scale_c) + (int8_t)zero_point_c;
 
-  ring_buffer[begin_index++] = quant_ax;
-  ring_buffer[begin_index++] = quant_ay;
-  ring_buffer[begin_index++] = quant_az;
-  ring_buffer[begin_index++] = quant_jx;
-  ring_buffer[begin_index++] = quant_jy;
-  ring_buffer[begin_index++] = quant_jz;
+  const int8_t quant_ax_p = (int8_t)(norm_ax / scale_p) + (int8_t)zero_point_p;
+  const int8_t quant_ay_p = (int8_t)(norm_ay / scale_p) + (int8_t)zero_point_p;
+  const int8_t quant_az_p = (int8_t)(norm_az / scale_p) + (int8_t)zero_point_p;
+  const int8_t quant_jx_p = (int8_t)(norm_jx / scale_p) + (int8_t)zero_point_p;
+  const int8_t quant_jy_p = (int8_t)(norm_jy / scale_p) + (int8_t)zero_point_p;
+  const int8_t quant_jz_p = (int8_t)(norm_jz / scale_p) + (int8_t)zero_point_p;
+  
+  ring_buffer_p[begin_index] = quant_ax_p;
+  ring_buffer_c[begin_index++] = quant_ax_c;
+  ring_buffer_p[begin_index] = quant_ay_p;
+  ring_buffer_c[begin_index++] = quant_ay_c;
+  ring_buffer_p[begin_index] = quant_az_p;
+  ring_buffer_c[begin_index++] = quant_az_c;
+  ring_buffer_p[begin_index] = quant_jx_p;
+  ring_buffer_c[begin_index++] = quant_jx_c;
+  ring_buffer_p[begin_index] = quant_jy_p;
+  ring_buffer_c[begin_index++] = quant_jy_c;
+  ring_buffer_p[begin_index] = quant_jz_p;
+  ring_buffer_c[begin_index++] = quant_jz_c;
 
   // If reach end of buffer, return to 0 position
   if (begin_index >= kRingBufferSize) begin_index = 0;
@@ -111,8 +130,20 @@ bool ReadAccelerometer(tflite::ErrorReporter *error_reporter, int8_t *input,
     if (ring_index < 0)
       ring_index += kRingBufferSize;
     // copy stored data to the input tensor
-    input[i] = ring_buffer[ring_index];
+    input_c[i] = ring_buffer_c[ring_index];
+    input_p[i] = ring_buffer_p[ring_index];
   }
 
   return true;
+}
+
+void GetLatestData(tflite::ErrorReporter *error_reporter, float *latest_data,
+                   int length) {
+  for (int i = 0; i < length; ++i) {
+    int ring_index = begin_index - length + i;
+    if (ring_index < 0)
+      ring_index += kRingBufferSize;
+    // copy and convert stored data to the input array
+    latest_data[i] = (ring_buffer_p[ring_index] - zero_point_p) * scale_p;
+  }
 }

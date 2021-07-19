@@ -16,26 +16,33 @@
 
 // Globals, used for compatibility with Arduino-style sketches.
 namespace {
+// Error reporter for displaying message when debugging
 tflite::ErrorReporter *error_reporter = nullptr;
+// The classifier model
 const tflite::Model *classifier = nullptr;
 tflite::MicroInterpreter *classifier_interpreter = nullptr;
 TfLiteTensor *classifier_input = nullptr;
 TfLiteTensor *classifier_output = nullptr;
+// The predictor model
 const tflite::Model *predictor = nullptr;
 tflite::MicroInterpreter *predictor_interpreter = nullptr;
 TfLiteTensor *predictor_input = nullptr;
 TfLiteTensor *predictor_output = nullptr;
+// Input length of two model (should be the same)
 int input_length;
-
 // Create an area of memory to use for input, output, and intermediate arrays.
 // The size of this will depend on the model you're using, and may need to be
 // determined by experimentation.
 constexpr int kTensorArenaSize = 90 * 1024;
 #if (defined(__GNUC__) || defined(__GNUG__)) && !defined (__CCAC__)
-alignas(16) static uint8_t tensor_arena[kTensorArenaSize] __attribute__((section(".tensor_arena")));
+alignas(16) static uint8_t tensor_arena_c[kTensorArenaSize] __attribute__((section(".tensor_arena_c")));
+alignas(16) static uint8_t tensor_arena_p[kTensorArenaSize] __attribute__((section(".tensor_arena_p")));
 #else
-#pragma Bss(".tensor_arena")
-static uint8_t tensor_arena[kTensorArenaSize];
+#pragma Bss(".tensor_arena_c")
+static uint8_t tensor_arena_c[kTensorArenaSize];
+#pragma Bss()
+#pragma Bss(".tensor_arena_p")
+static uint8_t tensor_arena_p[kTensorArenaSize];
 #pragma Bss()
 #endif // if defined (_GNUC_) && !defined (_CCAC_)
 
@@ -101,22 +108,25 @@ void setup() {
 
   // Build an interpreter to run the model with.
   static tflite::MicroInterpreter static_classifier_interpreter(
-      classifier, classifier_op_resolver, tensor_arena, kTensorArenaSize,
+      classifier, classifier_op_resolver, tensor_arena_c, kTensorArenaSize,
       error_reporter);
   classifier_interpreter = &static_classifier_interpreter;
 
   static tflite::MicroInterpreter static_predictor_interpreter(
-      predictor, predictor_op_resolver, tensor_arena, kTensorArenaSize,
+      predictor, predictor_op_resolver, tensor_arena_p, kTensorArenaSize,
       error_reporter);
   predictor_interpreter = &static_predictor_interpreter;
 
   // Allocate memory from the tensor_arena for the model's tensors.
-  TfLiteStatus allocate_status = classifier_interpreter->AllocateTensors();
-  if (allocate_status != kTfLiteOk) {
+  if (classifier_interpreter->AllocateTensors() != kTfLiteOk) {
     TF_LITE_REPORT_ERROR(error_reporter, "AllocateTensors() failed");
     return;
   }
-  TF_LITE_REPORT_ERROR(error_reporter, "here");
+
+  if (predictor_interpreter->AllocateTensors() != kTfLiteOk) {
+    TF_LITE_REPORT_ERROR(error_reporter, "AllocateTensors() failed");
+    return;
+  }
 
   // Obtain pointer to the model's input/output tensor.
   classifier_input = classifier_interpreter->input(0);
@@ -131,9 +141,9 @@ void setup() {
       classifier_output->params.zero_point, classifier_output->params.scale);
 
   // Initialize accelerometer and i2c bus.
-  TfLiteStatus accel_setup_status = SetupAccelerometer(
-      error_reporter,
-      classifier_input->params.zero_point, classifier_input->params.scale);
+  TfLiteStatus accel_setup_status = SetupAccelerometer(error_reporter,
+      classifier_input->params.zero_point, classifier_input->params.scale,
+      predictor_input->params.zero_point, predictor_input->params.scale);
   if (accel_setup_status != kTfLiteOk) {
     TF_LITE_REPORT_ERROR(error_reporter, "accel set up failed\n");
   }
@@ -152,13 +162,20 @@ void loop() {
   // Attempt to read new data from the accelerometer.
   bool got_data = ReadAccelerometer(error_reporter,
                                     classifier_input->data.int8,
+                                    predictor_input->data.int8,
                                     input_length);
   // If there was no new data, wait until next time.
   if (!got_data) return;
 
   // Run inference, and report any error.
-  TfLiteStatus invoke_status = classifier_interpreter->Invoke();
-  if (invoke_status != kTfLiteOk) {
+  TfLiteStatus invoke_status_c = classifier_interpreter->Invoke();
+  if (invoke_status_c != kTfLiteOk) {
+    TF_LITE_REPORT_ERROR(error_reporter, "Invoke failed\n");
+    return;
+  }
+
+  TfLiteStatus invoke_status_p = predictor_interpreter->Invoke();
+  if (invoke_status_p != kTfLiteOk) {
     TF_LITE_REPORT_ERROR(error_reporter, "Invoke failed\n");
     return;
   }
@@ -167,29 +184,34 @@ void loop() {
   sprintf(buf, "Predict: %d", index);
   TF_LITE_REPORT_ERROR(error_reporter, buf);
 
-  // The following code is to display the real value of inference output.
-  // for (int i = 0; i < 6; ++i) {
-  //   float o = (model_output->data.int8[i] - model_output->params.zero_point) * model_output->params.scale;
-  //   int t = o * 1000;
-  //   int int_part = t / 1000;
-  //   int frac_part = t % 1000;
-  //   sprintf(buf, "[%d]: %d.%d", i, int_part, frac_part);
-  //   TF_LITE_REPORT_ERROR(error_reporter, buf);
-  // }
-  // TF_LITE_REPORT_ERROR(error_reporter, "\r");
+  // Retrieve data from prediction result
+  float origin[6];
+  GetLatestData(error_reporter, origin, 6);
 
-  // int8_t data_buf[kMotionCount * sizeof(float)];
-  // for (int i = 0; i < 6; ++i) {
-  //   floatData ff;
-  //   ff.f_val = (model_output->data.int8[i] - model_output->params.zero_point) *
-  //       model_output->params.scale;
-  //   data_buf[i * 4 + 0] = ff.bytes[0];
-  //   data_buf[i * 4 + 1] = ff.bytes[1];
-  //   data_buf[i * 4 + 2] = ff.bytes[2];
-  //   data_buf[i * 4 + 3] = ff.bytes[3];
-  // }
+  int8_t data_buf[25];  // prediction ax ay az and origin ax ay az and class
+  for (int i = 0; i < 3; ++i) {
+    floatData ff;
+    ff.f_val =
+        (predictor_output->data.int8[i] - predictor_output->params.zero_point) *
+        predictor_output->params.scale;  // retrieve the real value of output
+    data_buf[i * 4 + 0] = ff.bytes[0];
+    data_buf[i * 4 + 1] = ff.bytes[1];
+    data_buf[i * 4 + 2] = ff.bytes[2];
+    data_buf[i * 4 + 3] = ff.bytes[3];
+  }
 
-  TfLiteStatus transmit_status = I2CSendOutput(error_reporter, &index, 1);
+  for (int i = 0; i < 3; ++i) {  // put only ax ay and az
+    floatData ff;
+    ff.f_val = origin[i];
+    data_buf[12 + i * 4] = ff.bytes[0];
+    data_buf[13 + i * 4] = ff.bytes[1];
+    data_buf[14 + i * 4] = ff.bytes[2];
+    data_buf[15 + i * 4] = ff.bytes[3];
+  }
+
+  data_buf[24] = index;  // put classification result on the last byte
+
+  TfLiteStatus transmit_status = I2CSendOutput(error_reporter, data_buf, 25);
   if (transmit_status != kTfLiteOk) {
     TF_LITE_REPORT_ERROR(error_reporter, "Cannot transmit\n");
   }
