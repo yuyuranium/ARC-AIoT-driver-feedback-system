@@ -15,15 +15,15 @@ constexpr uint8_t kRight = 5;
 
 // consts obtained from training phase
 constexpr float kAccelMean[3] = {
-    0.9510178671889282, 0.030960616493194554, 0.0779531734518597 };
+    0.9487810621465815, 0.03946548768500278, 0.06886678821127502 };
 constexpr float kJerkMean[3] = {
-    -0.005992084180475412, 0.0008366459020875214, 0.00811919606520344 };
+    -0.00326175719059994, 0.001484422197827616, 0.009953398211114467 };
 constexpr float kAccelStd[3] = {
-    0.12887788435917533, 0.11934031413396946, 0.17276545673112512 };
+    0.1313167093450731, 0.11926362940605395, 0.17273308090512682 };
 constexpr float kJerkStd[3] = {
-    2.3096330606078035, 1.8162722841544086, 2.333676180306296 };
+    2.3153819130934132, 1.803095985733507, 2.2968154997810615 };
 
-constexpr float kDetectionThresholdConfidence = 0.6;
-constexpr int kPredictionHistoryLength = 20;
+constexpr float kDetectionThresholdConfidence = 0.75;
+constexpr int kPredictionHistoryLength = 10;
 
 #endif  // CONSTANTS_H_
