@@ -27,6 +27,7 @@ def plot_next(delta):
     plt.subplot(411)
     plt.plot(data['ax'], label='ax')
     plt.plot(data['p_ax'], label='p_ax')
+    plt.plot(data['dx'], label='dx')
     marker = 0
     c = data['p_class'][marker]
     for x in range(0, data.shape[0]):
@@ -43,6 +44,7 @@ def plot_next(delta):
     plt.subplot(412)
     plt.plot(data['ay'], label='ay')
     plt.plot(data['p_ay'], label='p_ay')
+    plt.plot(data['dy'], label='dy')
     marker = 0
     c = data['p_class'][marker]
     for x in range(0, data.shape[0]):
@@ -58,6 +60,7 @@ def plot_next(delta):
     plt.subplot(413)
     plt.plot(data['az'], label='az')
     plt.plot(data['p_az'], label='p_az')
+    plt.plot(data['dz'], label='dz')
     marker = 0
     c = data['p_class'][marker]
     for x in range(0, data.shape[0]):
