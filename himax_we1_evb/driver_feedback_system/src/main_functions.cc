@@ -5,7 +5,7 @@
 #include "classifier_model.h"
 #include "predictor_model.h"
 #include "constants.h"
-#include "motion_predictor.h"
+#include "motion_detector.h"
 #include "i2c_output_handler.h"
 
 #include "tensorflow/lite/micro/micro_error_reporter.h"
@@ -168,7 +168,7 @@ void loop() {
                                     classifier_input->data.int8,
                                     predictor_input->data.int8,
                                     input_length);
-  // If there was no new data, wait until next time.
+  // If there was not any new data, wait until next time.
   if (!got_data) return;
 
   // Run inference on classifier model, and report any error.
@@ -185,8 +185,9 @@ void loop() {
     return;
   }
 
-  int8_t index = PredictMotion(error_reporter, classifier_output->data.int8);
-  TF_LITE_REPORT_ERROR(error_reporter, "Predict: %d", index);
+  // Obtain motion detection result
+  int8_t motion = DetectMotion(error_reporter, classifier_output->data.int8);
+  TF_LITE_REPORT_ERROR(error_reporter, "Predict: %d", motion);
 
   // TODO Run the state machine
 
@@ -206,7 +207,7 @@ void loop() {
     data_buf[i * 4 + 3] = ff.bytes[3];
   }
 
-  for (int i = 0; i < 3; ++i) {  // put only ax ay and az
+  for (int i = 0; i < 3; ++i) {  // Put only ax ay and az
     floatData ff;
     ff.f_val = origin[i];
     data_buf[12 + i * 4] = ff.bytes[0];
@@ -215,7 +216,7 @@ void loop() {
     data_buf[15 + i * 4] = ff.bytes[3];
   }
 
-  data_buf[24] = index;  // put classification result on the last byte
+  data_buf[24] = motion;  // Put classification result on the last byte
 
   TfLiteStatus transmit_status = I2CSendOutput(error_reporter, data_buf, 25);
   if (transmit_status != kTfLiteOk) {
