@@ -19,7 +19,7 @@ const char *kDataName[kData] = { "ax", "ay", "az", "jx", "jy", "jz", "class" };
 
 unsigned long regret_trigger_time;
 uint8_t class_type;
-uint8_t file_counter;
+int file_counter;
 boolean busy;
 char val;
 
