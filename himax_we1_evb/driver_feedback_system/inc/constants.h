@@ -25,9 +25,9 @@ constexpr float kJerkStd[3] = {
   2.3153819130934132, 1.803095985733507, 2.2968154997810615 };
 
 // Confidence and length of history for motion detection
-constexpr float kDetectionThresholdConfidence = 0.75;
-constexpr int kDetectionHistoryLength = 10;
-constexpr int kTransitionMotinoAccumulatorThreshold = 5;
+constexpr float kDetectionConfidenceThreshold = 0.78;
+constexpr int kDetectionHistoryLength = 15;
+constexpr int kTransitionMotinoAccumulatorThreshold = 10;
 constexpr int kTransitionHistoryLength = 10;
 
 // Number of states

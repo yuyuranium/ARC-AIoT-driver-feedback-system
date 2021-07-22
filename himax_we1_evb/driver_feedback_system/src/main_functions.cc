@@ -100,7 +100,6 @@ void setup() {
   classifier_op_resolver.AddReshape();
   classifier_op_resolver.AddRelu();
   classifier_op_resolver.AddSoftmax();
-
   static tflite::MicroMutableOpResolver<4> predictor_op_resolver;  // NOLINT
   predictor_op_resolver.AddReshape();
   predictor_op_resolver.AddConv2D();
@@ -138,7 +137,7 @@ void setup() {
 
   // Initialize detection with confidence threshold
   int quant_detection_threshold = SetDetectionThreshold(
-      error_reporter, kDetectionThresholdConfidence,
+      error_reporter, kDetectionConfidenceThreshold,
       classifier_output->params.zero_point, classifier_output->params.scale);
 
   // Initialize accelerometer
