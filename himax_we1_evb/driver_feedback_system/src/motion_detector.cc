@@ -7,14 +7,14 @@ namespace {
 // State for the averaging algorithm we're using.
 int8_t detection_history[kMotions][kDetectionHistoryLength] = {0};
 int detection_history_index = 0;
-int detectionThreshold = 0;
+int detection_threshold = 0;
 int last_detection = 0;
 }  // namespace
 
 int SetDetectionThreshold(tflite::ErrorReporter* error_reporter,
                           float confidence, uint32_t zero_point, float scale) {
-  detectionThreshold = (int)(confidence / scale) + (int)zero_point;
-  return detectionThreshold;
+  detection_threshold = (int)(confidence / scale) + (int)zero_point;
+  return detection_threshold;
 }
 
 int8_t DetectMotion(tflite::ErrorReporter* error_reporter, int8_t *output) {
@@ -44,7 +44,7 @@ int8_t DetectMotion(tflite::ErrorReporter* error_reporter, int8_t *output) {
     }
   }
 
-  if (max_detection_score > detectionThreshold) {
+  if (max_detection_score > detection_threshold) {
     last_detection = max_detection_index;
     return max_detection_index;
   } else {

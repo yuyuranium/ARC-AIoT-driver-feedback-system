@@ -5,11 +5,11 @@
 
 namespace {
 // Beta of LPF
-const float kLPFBeta = 0.25;
+constexpr float kLPFBeta = 0.25;
 // Sampling parameters
-const float kSamplingPeriod = 0.04;
-const uint32_t kClkRate = 400000000;
-const uint32_t kSamplingCycle = kSamplingPeriod*kClkRate;
+constexpr float kSamplingPeriod = 0.04;
+constexpr uint32_t kClkRate = 400000000;
+constexpr uint32_t kSamplingCycle = kSamplingPeriod*kClkRate;
 // Ring buffer size
 constexpr int kRingBufferSize = 180;  // 6 * 60
 // Ring buffers for both models

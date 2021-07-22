@@ -1,10 +1,11 @@
 #include "main_functions.h"
 #include "hx_drv_tflm.h"
 
+#include "constants.h"
 #include "accelerometer_handler.h"
 #include "classifier_model.h"
 #include "predictor_model.h"
-#include "constants.h"
+#include "state_machine_handler.h"
 #include "motion_detector.h"
 #include "i2c_output_handler.h"
 
@@ -154,7 +155,11 @@ void setup() {
     TF_LITE_REPORT_ERROR(error_reporter, "i2c set up failed\n");
   }
   
-  // TODO Run the state machine
+  // TODO Setup the state machine
+  TfLiteStatus state_machine_status = SetupStateMachine(error_reporter);
+  if (state_machine_status != kTfLiteOk) {
+    TF_LITE_REPORT_ERROR(error_reporter, "state machine set up failed\n");
+  }
 
   TF_LITE_REPORT_ERROR(
       error_reporter,
@@ -190,12 +195,14 @@ void loop() {
   TF_LITE_REPORT_ERROR(error_reporter, "Predict: %d", motion);
 
   // TODO Run the state machine
+  uint8_t state = StateTransition(motion);
+  TF_LITE_REPORT_ERROR(error_reporter, "%d: %s", state, kStateNames[state]);
 
   // Retrieve data from prediction result
   float origin[6];
   GetLatestData(error_reporter, origin, 6);
 
-  int8_t data_buf[25];  // prediction ax ay az and origin ax ay az and class
+  int8_t data_buf[26];  // prediction ax ay az and origin ax ay az and class
   for (int i = 0; i < 3; ++i) {
     floatData ff;
     ff.f_val =
@@ -217,8 +224,9 @@ void loop() {
   }
 
   data_buf[24] = motion;  // Put classification result on the last byte
+  data_buf[25] = state;   // Put current state on the last byte
 
-  TfLiteStatus transmit_status = I2CSendOutput(error_reporter, data_buf, 25);
+  TfLiteStatus transmit_status = I2CSendOutput(error_reporter, data_buf, 26);
   if (transmit_status != kTfLiteOk) {
     TF_LITE_REPORT_ERROR(error_reporter, "Cannot transmit\n");
   }

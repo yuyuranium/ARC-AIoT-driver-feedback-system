@@ -3,10 +3,8 @@
 #include "hx_drv_tflm.h"
 
 namespace {
-
 // Address of arduino
 constexpr uint8_t kArduinoAddr = 0x12;
-
 }  // namespace
 
 TfLiteStatus SetupI2C(tflite::ErrorReporter* error_reporter) {

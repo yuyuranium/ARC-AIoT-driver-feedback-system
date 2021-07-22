@@ -3,37 +3,67 @@
 #include "hx_drv_tflm.h"
 
 namespace {
-const uint8_t kStates = 16;
-const uint8_t kTransitionTable[kStates][kMotions] = {
-
+// The transition table
+constexpr uint8_t kTransitionTable[kStates][kMotions] = {
+  { 1, 15, 15, 15, 15, 15 },  //  0: "initial",
+  { 8,  6,  7,  3,  4,  5 },  //  1: "w-idle",
+  { 1,  6,  9,  3,  4,  5 },  //  2: "w-start-off",
+  { 1,  6,  7, 10,  4,  5 },  //  3: "w-brake",
+  { 1,  6,  7,  3, 11,  5 },  //  4: "w-left",
+  { 1,  6,  7,  3,  4, 12 },  //  5: "w-right",
+  { 1, 13,  7,  3,  4,  5 },  //  6: "w-cruise",
+  { 1,  6, 14,  3,  4,  5 },  //  7: "w-accel",
+  { 8,  1,  2,  1,  1,  1 },  //  8: "s-idle",
+  { 2,  6,  9,  2,  2,  2 },  //  9: "s-start-off",
+  { 1,  3,  3, 10,  3,  3 },  // 10: "s-brake",
+  { 4,  4,  4,  4, 11,  4 },  // 11: "s-left",
+  { 5,  5,  5,  5,  5, 12 },  // 12: "s-right",
+  { 6, 13,  6,  6,  6,  6 },  // 13: "s-cruise",
+  { 7,  6, 14,  7,  7,  7 },  // 14: "s-accel",
+  { 1, 15, 15, 15, 15, 15 },  // 15: "pending"
 };
-
-
-
-
-// Beta of LPF
-const float kLPFBeta = 0.25;
-// Sampling parameters
-const float kSamplingPeriod = 0.04;
-const uint32_t kClkRate = 400000000;
-const uint32_t kSamplingCycle = kSamplingPeriod*kClkRate;
-// Ring buffer size
-constexpr int kRingBufferSize = 180;  // 6 * 60
-// Ring buffers for both models
-int8_t ring_buffer_c[kRingBufferSize] = {0};
-int8_t ring_buffer_p[kRingBufferSize] = {0};
-// Available data count in accelerometer FIFO
-int available_count = 0;
-// The head of the ring buffer
+// Current state of the vehicle
+uint8_t state;
+// The history of transitions using ring buffer structure
+uint8_t transition_history[kTransitionHistoryLength];
+// The head to the transition history
 int begin_index;
-// Raw data of accelerometer
-float raw_ax, raw_ay, raw_az; // Timer
-uint32_t tick_now, tick_last;
-// Float data of accel and jerk
-float accel[3], accel_last[3], jerk[3];
-// Quantization parameters of both models' input
-int32_t zero_point_c;
-int32_t zero_point_p;
-float scale_c;
-float scale_p;
+// The buffer that stores the detected motion, if full, it triggers transition
+int8_t current_motion;
+// The index to put the latest motion in
+int8_t motion_accumulator;
 }  // namespace
+
+
+TfLiteStatus SetupStateMachine(tflite::ErrorReporter *error_reporter) {
+  TF_LITE_REPORT_ERROR(error_reporter, "setting up state machine");
+  current_motion = -1;
+  motion_accumulator = 0;
+  begin_index = 0;
+  state = 0;
+  TF_LITE_REPORT_ERROR(error_reporter, "setup done");
+  return kTfLiteOk;
+}
+
+uint8_t StateTransition(int8_t motion) {
+  // Not doing anything when detection is unknown
+  if (motion == -1) return state;
+
+  // To check if the upcoming detection is consistent with the buffered ones
+  if (motion != current_motion) {
+    // Clean the buffer and update the current motion
+    current_motion = motion;
+    motion_accumulator = 1;
+  } else if (++motion_accumulator >= kTransitionMotinoAccumulatorThreshold) {
+    // Trigger transition after accumulating reaches the threshold
+    state = kTransitionTable[state][motion];
+    transition_history[begin_index++] = state;
+    if (begin_index == kTransitionHistoryLength) {
+      begin_index = 0;
+    }
+    motion_accumulator = 0;  // Reset the accumulator
+  }
+  current_motion = motion;
+
+  return state;
+}
