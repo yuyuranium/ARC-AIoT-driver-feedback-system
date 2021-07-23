@@ -9,9 +9,8 @@ extern TfLiteStatus SetupAccelerometer(tflite::ErrorReporter *error_reporter,
                                        float input_scale_c,
                                        int32_t input_zero_point_p,
                                        float input_scale_p);
-extern bool ReadAccelerometer(tflite::ErrorReporter *error_reporter,
-                              int8_t *input_c, int8_t *input_p, int length);
-extern void GetLatestData(tflite::ErrorReporter *error_reporter,
-                          float *latest_data, int length);
+extern bool ReadAccelerometer(int8_t *input_c, int8_t *input_p, int length);
+extern void GetLatestData(float *latest_data, int length);
+extern void GetLatestAccel(float *latest_accel);
 
 #endif  // ACCELEROMETER_HANDLER_H_

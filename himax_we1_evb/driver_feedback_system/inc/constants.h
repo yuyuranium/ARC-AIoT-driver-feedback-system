@@ -23,34 +23,21 @@ constexpr float kAccelStd[3] = {
   0.1313167093450731, 0.11926362940605395, 0.17273308090512682 };
 constexpr float kJerkStd[3] = {
   2.3153819130934132, 1.803095985733507, 2.2968154997810615 };
+constexpr int kSteps = 30;
 
 // Confidence and length of history for motion detection
-constexpr float kDetectionConfidenceThreshold = 0.78;
-constexpr int kDetectionHistoryLength = 15;
+constexpr float kDetectionConfidenceThreshold = 0.76;
+constexpr int kDetectionHistoryLength = 10;
 constexpr int kTransitionMotinoAccumulatorThreshold = 10;
 constexpr int kTransitionHistoryLength = 10;
+constexpr int kDiffBufferPadding = 5;
+
+// The length of diff buffer depends on previous parameters of models' or state
+// machine's
+constexpr int kErrorBufferLength = kSteps + kDetectionHistoryLength / 2
+    + kTransitionMotinoAccumulatorThreshold * 2 + kDiffBufferPadding;
 
 // Number of states
 constexpr uint8_t kStates = 16;
-
-// Names of each state
-constexpr char *kStateNames[kStates] = {
-  "initial",      //  0
-  "w-idle",       //  1
-  "w-start-off",  //  2
-  "w-brake",      //  3
-  "w-left",       //  4
-  "w-right",      //  5
-  "w-cruise",     //  6
-  "w-accel",      //  7
-  "s-idle",       //  8
-  "s-start-off",  //  9
-  "s-brake",      // 10
-  "s-left",       // 11
-  "s-right",      // 12
-  "s-cruise",     // 13
-  "s-accel",      // 14
-  "pending"       // 15
-};
 
 #endif  // CONSTANTS_H_

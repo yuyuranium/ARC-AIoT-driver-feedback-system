@@ -17,7 +17,7 @@ int SetDetectionThreshold(tflite::ErrorReporter* error_reporter,
   return detection_threshold;
 }
 
-int8_t DetectMotion(tflite::ErrorReporter* error_reporter, int8_t *output) {
+int8_t DetectMotion(int8_t *output) {
   for (int i = 0; i < kMotions; ++i) {
     detection_history[i][detection_history_index] = output[i];
   }
@@ -27,7 +27,7 @@ int8_t DetectMotion(tflite::ErrorReporter* error_reporter, int8_t *output) {
     detection_history_index = 0;
   }
 
-  // Average the last n detections for each gesture, and find which has the
+  // Average the last n detections for each motion, and find which has the
   // highest score.
   int max_detection_index = -1;
   int8_t max_detection_score = 0.0;

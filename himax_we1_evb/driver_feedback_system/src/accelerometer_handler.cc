@@ -20,7 +20,8 @@ int available_count = 0;
 // The head of the ring buffer
 int begin_index;
 // Raw data of accelerometer
-float raw_ax, raw_ay, raw_az; // Timer
+float raw_ax, raw_ay, raw_az;
+// Timer
 uint32_t tick_now, tick_last;
 // Float data of accel and jerk
 float accel[3], accel_last[3], jerk[3];
@@ -53,8 +54,7 @@ TfLiteStatus SetupAccelerometer(tflite::ErrorReporter *error_reporter,
   return kTfLiteOk;
 }
 
-bool ReadAccelerometer(tflite::ErrorReporter *error_reporter,
-                       int8_t *input_c, int8_t *input_p, int length) {
+bool ReadAccelerometer(int8_t *input_c, int8_t *input_p, int length) {
   available_count = hx_drv_accelerometer_available_count();				
 
   for (int i = 0; i < available_count; ++i) {
@@ -137,8 +137,7 @@ bool ReadAccelerometer(tflite::ErrorReporter *error_reporter,
   return true;
 }
 
-void GetLatestData(tflite::ErrorReporter *error_reporter, float *latest_data,
-                   int length) {
+void GetLatestData(float *latest_data, int length) {
   for (int i = 0; i < length; ++i) {
     int ring_index = begin_index - length + i;
     if (ring_index < 0)
@@ -146,4 +145,10 @@ void GetLatestData(tflite::ErrorReporter *error_reporter, float *latest_data,
     // Copy and convert stored data to the input array
     latest_data[i] = (ring_buffer_p[ring_index] - zero_point_p) * scale_p;
   }
+}
+
+void GetLatestAccel(float *latest_accel) {
+  latest_accel[X] = (accel[X] - kAccelMean[X]) / kAccelStd[X];
+  latest_accel[Y] = (accel[Y] - kAccelMean[Y]) / kAccelStd[Y];
+  latest_accel[Z] = (accel[Z] - kAccelMean[Z]) / kAccelStd[Z];
 }

@@ -6,6 +6,6 @@
 extern int SetDetectionThreshold(tflite::ErrorReporter* error_reporter,
                                  float confidence, uint32_t zero_point,
                                  float scale);
-extern int8_t DetectMotion(tflite::ErrorReporter* error_reporter, int8_t *output);
+extern int8_t DetectMotion(int8_t *output);
 
 #endif // MOTION_DETECTOR_H_

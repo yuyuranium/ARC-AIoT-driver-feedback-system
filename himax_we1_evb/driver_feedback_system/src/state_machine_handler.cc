@@ -6,7 +6,7 @@ namespace {
 // The transition table
 constexpr uint8_t kTransitionTable[kStates][kMotions] = {
   { 1, 15, 15, 15, 15, 15 },  //  0: "initial",
-  { 8,  6,  7,  3,  4,  5 },  //  1: "w-idle",
+  { 8,  6,  2,  3,  4,  5 },  //  1: "w-idle",
   { 1,  6,  9,  3,  4,  5 },  //  2: "w-start-off",
   { 1,  6,  7, 10,  4,  5 },  //  3: "w-brake",
   { 1,  6,  7,  3, 11,  5 },  //  4: "w-left",
@@ -18,20 +18,20 @@ constexpr uint8_t kTransitionTable[kStates][kMotions] = {
   { 1,  3,  3, 10,  3,  3 },  // 10: "s-brake",
   { 4,  4,  4,  4, 11,  4 },  // 11: "s-left",
   { 5,  5,  5,  5,  5, 12 },  // 12: "s-right",
-  { 6, 13,  6,  6,  6,  6 },  // 13: "s-cruise",
+  { 6, 13,  6,  3,  6,  6 },  // 13: "s-cruise",
   { 7,  6, 14,  7,  7,  7 },  // 14: "s-accel",
   { 1, 15, 15, 15, 15, 15 },  // 15: "pending"
 };
 // Current state of the vehicle
-uint8_t state;
+uint8_t state = 0;
 // The history of transitions using ring buffer structure
-uint8_t transition_history[kTransitionHistoryLength];
+uint8_t transition_history[kTransitionHistoryLength] = {0};
 // The head to the transition history
-int begin_index;
+int begin_index = 0;
 // The buffer that stores the detected motion, if full, it triggers transition
-int8_t current_motion;
+int8_t current_motion = -1;
 // The index to put the latest motion in
-int8_t motion_accumulator;
+int8_t motion_accumulator = 0;
 }  // namespace
 
 

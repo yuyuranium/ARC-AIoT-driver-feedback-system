@@ -7,6 +7,7 @@
 #include "predictor_model.h"
 #include "state_machine_handler.h"
 #include "motion_detector.h"
+#include "error_evaluation_handler.h"
 #include "i2c_output_handler.h"
 
 #include "tensorflow/lite/micro/micro_error_reporter.h"
@@ -154,7 +155,7 @@ void setup() {
     TF_LITE_REPORT_ERROR(error_reporter, "i2c set up failed\n");
   }
   
-  // TODO Setup the state machine
+  // Setup the state machine
   TfLiteStatus state_machine_status = SetupStateMachine(error_reporter);
   if (state_machine_status != kTfLiteOk) {
     TF_LITE_REPORT_ERROR(error_reporter, "state machine set up failed\n");
@@ -168,8 +169,7 @@ void setup() {
 
 void loop() {
   // Attempt to read new data from the accelerometer.
-  bool got_data = ReadAccelerometer(error_reporter,
-                                    classifier_input->data.int8,
+  bool got_data = ReadAccelerometer(classifier_input->data.int8,
                                     predictor_input->data.int8,
                                     input_length);
   // If there was not any new data, wait until next time.
@@ -190,42 +190,62 @@ void loop() {
   }
 
   // Obtain motion detection result
-  int8_t motion = DetectMotion(error_reporter, classifier_output->data.int8);
-  TF_LITE_REPORT_ERROR(error_reporter, "Predict: %d", motion);
+  int8_t motion = DetectMotion(classifier_output->data.int8);
 
-  // TODO Run the state machine
+  // Obtain state after transition
   uint8_t state = StateTransition(motion);
-  TF_LITE_REPORT_ERROR(error_reporter, "%d: %s", state, kStateNames[state]);
 
-  // Retrieve data from prediction result
-  float origin[6];
-  GetLatestData(error_reporter, origin, 6);
+  float actual[3], prediction[3], error = 0.0;
 
-  int8_t data_buf[26];  // prediction ax ay az and origin ax ay az and class
+  // Retrieve data from prediction result and pass them to evaluation handler
+  prediction[X] =
+      (predictor_output->data.int8[X] - predictor_output->params.zero_point)
+      * predictor_output->params.scale;
+  prediction[Y] =
+      (predictor_output->data.int8[Y] - predictor_output->params.zero_point)
+      * predictor_output->params.scale;
+  prediction[Z] =
+      (predictor_output->data.int8[Z] - predictor_output->params.zero_point)
+      * predictor_output->params.scale;
+  GetLatestAccel(actual);
+
+  bool got_evaluation = EvaluateError(&error, state, prediction, actual);
+
+  int8_t data_buf[30];  // prediction ax ay az and origin ax ay az and class
+
   for (int i = 0; i < 3; ++i) {
     floatData ff;
-    ff.f_val =
-        (predictor_output->data.int8[i] - predictor_output->params.zero_point) *
-        predictor_output->params.scale;  // retrieve the real value of output
+    ff.f_val = prediction[i];
     data_buf[i * 4 + 0] = ff.bytes[0];
     data_buf[i * 4 + 1] = ff.bytes[1];
     data_buf[i * 4 + 2] = ff.bytes[2];
     data_buf[i * 4 + 3] = ff.bytes[3];
   }
 
-  for (int i = 0; i < 3; ++i) {  // Put only ax ay and az
+  for (int i = 0; i < 3; ++i) {
     floatData ff;
-    ff.f_val = origin[i];
+    ff.f_val = actual[i];
     data_buf[12 + i * 4] = ff.bytes[0];
     data_buf[13 + i * 4] = ff.bytes[1];
     data_buf[14 + i * 4] = ff.bytes[2];
     data_buf[15 + i * 4] = ff.bytes[3];
   }
 
-  data_buf[24] = motion;  // Put classification result on the last byte
-  data_buf[25] = state;   // Put current state on the last byte
+  if (got_evaluation) {
+    TF_LITE_REPORT_ERROR(error_reporter, "Error evaluated");
+  }
 
-  TfLiteStatus transmit_status = I2CSendOutput(error_reporter, data_buf, 26);
+  floatData ff;
+  ff.f_val = error;
+  data_buf[24] = ff.bytes[0];
+  data_buf[25] = ff.bytes[1];
+  data_buf[26] = ff.bytes[2];
+  data_buf[27] = ff.bytes[3];
+
+  data_buf[28] = motion;  // Put classification result on the last byte
+  data_buf[29] = state;   // Put current state on the last byte
+
+  TfLiteStatus transmit_status = I2CSendOutput(data_buf, 30);
   if (transmit_status != kTfLiteOk) {
     TF_LITE_REPORT_ERROR(error_reporter, "Cannot transmit\n");
   }

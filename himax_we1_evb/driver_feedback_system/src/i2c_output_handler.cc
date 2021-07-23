@@ -16,8 +16,7 @@ TfLiteStatus SetupI2C(tflite::ErrorReporter* error_reporter) {
   return kTfLiteOk;
 }
 
-TfLiteStatus I2CSendOutput(tflite::ErrorReporter* error_reporter,
-                           int8_t *output, int length) {
+TfLiteStatus I2CSendOutput(int8_t *output, int length) {
   if (hx_drv_i2cm_set_data(kArduinoAddr, NULL, 0, (uint8_t *)output, length)
       != HX_DRV_LIB_PASS) {
     return kTfLiteError;
