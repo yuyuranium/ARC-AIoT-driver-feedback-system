@@ -15,6 +15,7 @@ constexpr uint8_t kLeft = 4;
 constexpr uint8_t kRight = 5;
 
 // Consts obtained from training phase
+constexpr int kSteps = 30;
 constexpr float kAccelMean[3] = {
   0.9487810621465815, 0.03946548768500278, 0.06886678821127502 };
 constexpr float kJerkMean[3] = {
@@ -23,14 +24,13 @@ constexpr float kAccelStd[3] = {
   0.1313167093450731, 0.11926362940605395, 0.17273308090512682 };
 constexpr float kJerkStd[3] = {
   2.3153819130934132, 1.803095985733507, 2.2968154997810615 };
-constexpr int kSteps = 30;
 
 // Confidence and length of history for motion detection
-constexpr float kDetectionConfidenceThreshold = 0.76;
-constexpr int kDetectionHistoryLength = 10;
-constexpr int kTransitionMotinoAccumulatorThreshold = 10;
+constexpr float kDetectionConfidenceThreshold = 0.75;
+constexpr int kDetectionHistoryLength = 9;
+constexpr int kTransitionMotinoAccumulatorThreshold = 7;
 constexpr int kTransitionHistoryLength = 10;
-constexpr int kDiffBufferPadding = 5;
+constexpr int kDiffBufferPadding = 9;
 
 // The length of diff buffer depends on previous parameters of models' or state
 // machine's

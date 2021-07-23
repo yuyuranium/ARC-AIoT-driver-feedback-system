@@ -24,9 +24,9 @@ bool EvaluateError(float *error, int8_t state,
                    float *prediction, float *actual) {
   // Update shift error buffer with latest data
   // Calculate the difference between previous prediction and the actual value
-  shift_error_buffer[X][begin_index] = predicted_value[X] - actual[X];
-  shift_error_buffer[Y][begin_index] = predicted_value[Y] - actual[Y];
-  shift_error_buffer[Z][begin_index] = predicted_value[Z] - actual[Z];
+  shift_error_buffer[X][begin_index] = actual[X] - predicted_value[X]; 
+  shift_error_buffer[Y][begin_index] = actual[Y] - predicted_value[Y]; 
+  shift_error_buffer[Z][begin_index] = actual[Z] - predicted_value[Z]; 
   predicted_value[X] = prediction[X];
   predicted_value[Y] = prediction[Y];
   predicted_value[Z] = prediction[Z];
@@ -37,10 +37,10 @@ bool EvaluateError(float *error, int8_t state,
 
   // If state is changed, then calculate the average error of the previous state
   if (state != current_state && n_accumulated > 0) {
-    current_state = state;
     *error = accumulated_error_sq / (float)n_accumulated;
     accumulated_error_sq = 0.0;
     n_accumulated = 0;
+    current_state = state;
     return true;
   }
 
@@ -53,17 +53,21 @@ bool EvaluateError(float *error, int8_t state,
   switch (state) {
     // For start off (9), accelerate (14) and brake (10)
     // Evaluate only the directions of back and forth, which is Z direction
+    // UPDATE: Evaluate the direction of up and down as well
     case 9:
     case 10:
     case 14:
+      accumulated_error_sq += SQ(shift_error_buffer[X][tail_index]);
       accumulated_error_sq += SQ(shift_error_buffer[Z][tail_index]);
       ++n_accumulated;
       break;
     // For left turn (11) and right turn (12)
     // Evaluate directions of left and right only, which is Y direction
+    // UPDATE: Evaluate the direction of up and down as well
     case 11:
     case 12:
       accumulated_error_sq += SQ(shift_error_buffer[Y][tail_index]);
+      accumulated_error_sq += SQ(shift_error_buffer[Z][tail_index]);
       ++n_accumulated;
       break;
     // For cruise (13)
