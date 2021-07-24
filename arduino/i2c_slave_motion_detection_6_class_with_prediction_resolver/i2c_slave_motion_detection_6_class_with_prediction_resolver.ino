@@ -9,13 +9,13 @@
 #define SERIAL_BAUD 115200
 #define BTSERIAL_BAUD 38400
 
-const uint8_t kData = 11;  // p_ax, p_ay, p_az, ax, ay, az, dx, dy, dz, p_class
+const uint8_t kData = 12;  // p_ax, p_ay, p_az, ax, ay, az, error, dx, dy, dz, p_class, state
 const uint8_t kLeds = 2;
 const uint8_t kHimaxPinOut = 2;
 const uint8_t kSdPinOut = 5;
 const uint8_t kLedPinOut[kLeds] = { 7, 8 };
 const char *kDataName[kData] = {
-  "p_ax", "p_ay", "p_az", "ax", "ay", "az", "dx", "dy", "dz", "p_class", "state" };
+  "p_ax", "p_ay", "p_az", "ax", "ay", "az", "error", "dx", "dy", "dz", "p_class", "state" };
 const char kHexDigits[16] = {
   '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
 const unsigned long kFileDuration = 20000;  // 20 second
@@ -23,7 +23,7 @@ const unsigned long kFileDuration = 20000;  // 20 second
 int file_counter;
 boolean busy;
 char val;
-int8_t index;
+int8_t motion;
 int8_t state;
 unsigned long last;
 
@@ -32,7 +32,7 @@ File data_entry;
 
 typedef union {
   float f_val;
-  uint8_t bytes[sizeof(float)];
+  uint8_t bytes[4];
 } floatData;
 
 void setup() {
@@ -69,7 +69,7 @@ void setup() {
   // initialize variables
   busy = false;
   file_counter = 0;
-  index = -1;
+  motion = -1;
   state = 0;
   digitalWrite(kLedPinOut[L], LOW);
   digitalWrite(kLedPinOut[R], LOW);
@@ -130,13 +130,13 @@ void receiveEvent(int count) {
   }
   // read the last one byte left as classification index
   if (Wire.available()) {
-    index = Wire.read();
+    motion = Wire.read();
   }
   if (Wire.available()) {
     state = Wire.read();
   }
   // update leds
-  switch (index) {
+  switch (motion) {
     case 0:
       // blink 2
       digitalWrite(kLedPinOut[L], !digitalRead(kLedPinOut[R]));  // sync with R
@@ -184,10 +184,10 @@ void receiveEvent(int count) {
       Serial.print(diff, 5);
       Serial.print(",");
     }
-    data_entry.print(index);
+    data_entry.print(motion);
     data_entry.print(",");
     data_entry.println(state);
-    Serial.print(index);
+    Serial.print(motion);
     Serial.print(",");
     Serial.println(state);
     BTSerial.print(kHexDigits[state]);
