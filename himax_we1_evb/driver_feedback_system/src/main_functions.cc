@@ -47,18 +47,16 @@ static uint8_t tensor_arena_c[kTensorArenaSize];
 static uint8_t tensor_arena_p[kTensorArenaSize];
 #pragma Bss()
 #endif // if defined (_GNUC_) && !defined (_CCAC_)
-
 // To transmit floating point numbers through I2C, decoupling ieee754 format to
 // four bytes using union
 typedef union {
   float f_val;
   uint8_t bytes[sizeof(float)];
 } floatData;
-
+// Data buffer for i2c transmission
+int8_t data_buf[6];
 }  // namespace
   
-char buf[100];
-
 // The name of this function is important for Arduino compatibility.
 void setup() {
   // Set up logging. Google style is to avoid globals or statics because of
@@ -195,7 +193,9 @@ void loop() {
   // Obtain state after transition
   uint8_t state = StateTransition(motion);
 
-  float actual[3], prediction[3], error = 0.0;
+  float actual[3], prediction[3];
+  floatData error;
+  error.f_val = 0.0;
 
   // Retrieve data from prediction result and pass them to evaluation handler
   prediction[X] =
@@ -209,43 +209,21 @@ void loop() {
       * predictor_output->params.scale;
   GetLatestAccel(actual);
 
-  bool got_evaluation = EvaluateError(&error, state, prediction, actual);
+  bool got_evaluation = EvaluateError(&error.f_val, state, prediction, actual);
 
-  int8_t data_buf[30];  // prediction ax ay az and origin ax ay az and class
-
-  for (int i = 0; i < 3; ++i) {
-    floatData ff;
-    ff.f_val = prediction[i];
-    data_buf[i * 4 + 0] = ff.bytes[0];
-    data_buf[i * 4 + 1] = ff.bytes[1];
-    data_buf[i * 4 + 2] = ff.bytes[2];
-    data_buf[i * 4 + 3] = ff.bytes[3];
-  }
-
-  for (int i = 0; i < 3; ++i) {
-    floatData ff;
-    ff.f_val = actual[i];
-    data_buf[12 + i * 4] = ff.bytes[0];
-    data_buf[13 + i * 4] = ff.bytes[1];
-    data_buf[14 + i * 4] = ff.bytes[2];
-    data_buf[15 + i * 4] = ff.bytes[3];
-  }
+  // Send float value of error and state to arduino via i2c
+  data_buf[0] = error.bytes[0];
+  data_buf[1] = error.bytes[1];
+  data_buf[2] = error.bytes[2];
+  data_buf[3] = error.bytes[3];
+  data_buf[4] = state;    // Put current state on the second last byte
+  data_buf[5] = motion;   // Put detected motion on the last byte
+  TfLiteStatus transmit_status = I2CSendOutput(data_buf, 6);
 
   if (got_evaluation) {
-    TF_LITE_REPORT_ERROR(error_reporter, "Error evaluated");
+    TF_LITE_REPORT_ERROR(error_reporter, "got evaluation");
   }
 
-  floatData ff;
-  ff.f_val = error;
-  data_buf[24] = ff.bytes[0];
-  data_buf[25] = ff.bytes[1];
-  data_buf[26] = ff.bytes[2];
-  data_buf[27] = ff.bytes[3];
-
-  data_buf[28] = motion;  // Put classification result on the last byte
-  data_buf[29] = state;   // Put current state on the last byte
-
-  TfLiteStatus transmit_status = I2CSendOutput(data_buf, 30);
   if (transmit_status != kTfLiteOk) {
     TF_LITE_REPORT_ERROR(error_reporter, "Cannot transmit\n");
   }
