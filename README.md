@@ -18,43 +18,35 @@ Our goal is to provide the users an objected way to analyze their steering style
 
   <img src="./img/Himax_WE-I_Plus_EVB.jpg" width="15%" align="right"/>
 
-  
-
   * Endpoint AI development board
   * In collaboration with Google TensorFlow Lite for Microcontrollers framework and Synopsys embARC MLI library
   * Collect acceleration data by the built 3-axis accelerometer
   * 2 TFLite models deployed on board
   * I2C master for data transimission
-
+  
 * Arduino Pro Mini
 
   <img src="./img/IMG_2852.jpg" width="12%" align="right"/>
-
-  
 
   * Microcontroller board based on the ATmega328
   * I2C slave for data transimission
   * Serve as the handler for human-machine interface
   * Use digital pin to simulate I2C master to communicate with LCD display
-
+  
 * **LCD 1602A**
 
   <img src="./img/IMG_2853.jpg" width="33%" align="right"/>
 
-  
-
   * 2 line 16 character LCD display module with I2C converter
   * To display information for user
-
+  
 * **Joystick Module** 
 
   <img src="./img/IMD-001996-600x600.jpg" width="20%" align="right"/>
 
-  
-
   * Serve as user input
   * To detect Up / Down / Left / Right / Press / Release operation from user
-
+  
 * **SD Card Module**
 
   * To record the grading history (TBD)
@@ -223,22 +215,22 @@ LCD:
     | $Start-off: N/A |
     | Total: 0     D  |
     +-----------------+
-    |
-    | Press down
-    v
+      |
+      | Press down
+      v
     +-----------------+   Push right   +-----------------+
     | $Brake: 4.5     | -------------> |<Very good!      |
     | Total: 87   UD> | <------------- | Try to keep it  |
     +-----------------+   Push left    +-----------------+
-    |
-    | Press down
-    v
+      |
+      | Press down
+      v
     +-----------------+   Push right   +-----------------+
     | $Brake: 0.4     | -------------> |<You may be      |
     | Total: 3    UD> | <------------- | a Sambao        |
     +-----------------+   Push left    +-----------------+
-    |
-    ...
+      |
+      ...
 ```
 
 
