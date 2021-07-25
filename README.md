@@ -27,7 +27,7 @@ The project is aiming for constructing a driver feedback system that can detect 
 
 ## System Overview
 
-<img src='./img/system_overview.png' width= 100% height=100% align='left'>
+<img src='./img/system_overview.png' width= 100% height=100%>
 
 
 
@@ -64,7 +64,7 @@ The tensorflow keras models are converted to tensorflow lite integer 8 models be
 
 The acceleration is measured by the 3-axis accelerometer on  Himax WE-1 Plus EVB with 25 Hertz sampling rate, and jerk is the derivative of acceleration.
 
-<img src='./img/plot_data.png' align='left'>
+<img src='./img/plot_data.png'>
 
 #### Labels
 
@@ -109,10 +109,7 @@ We choose a value to be the length of our training sequences, and generate the s
 | y1     | The class of motion of t<sub>start</sub> to t<sub>start+n.</sub> |
 | y2     | The information of t<sub>start+n+1</sub>.                    |
 
-<img src="./img/split_data.png" width=60% height=60% align='left'>
-
-
-
+<img src='./img/split_data.png' width=60% height=60%>
 
 ## Classifier model
 
@@ -132,7 +129,7 @@ An inception cell contains two primary branches, one is bottleneck branch. A bot
 
 
 
-<img src="./img/inception_cell.png" width=70% height=70% align='left'>
+<img src="./img/inception_cell.png" width=70% height=70%>
 
 
 
@@ -142,7 +139,7 @@ A complete classifier model is built by three inception cell, including one resi
 
 inception cell, and the flatten and output layers.
 
-<img src="./img/Classifier_diagram.png" width=50% height=50% align='left'>
+<img src="./img/Classifier_diagram.png" width=50% height=50%>
 
 ## Predictor model
 
@@ -158,7 +155,7 @@ The predictor model predict the future values of 3-axis acceleration by observin
 
 The predictor model is built by several Conv1D and Maxpooling1D layers in the first half, and fully connected layers in the second half.
 
-<img src="./img/Predictor_diagram.png" width=30% height=20% align='left'>
+<img src="./img/Predictor_diagram.png" width=30% height=20%>
 
 ### Demonstration
 
