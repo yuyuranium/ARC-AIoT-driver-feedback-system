@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The project is aiming for constructing a driver feedback system that can detect the behavior of the vehicle and analyze the steering style of the driver.
+The project is aiming for constructing a driver feedback system that can detect the behavior of the vehicle and analyze the steering style of the driver. 
 
 ## Develop Board/Module (till May 30th)
 
@@ -35,9 +35,7 @@ The project is aiming for constructing a driver feedback system that can detect 
 
 ## Hardware Architecture
 
-Upcoming design
 
-![](./img/SafeDriverArchitecture.png)
 
 
 
@@ -55,7 +53,7 @@ We use tensorflow functional API to build our models. Tensorflow functional API 
 
 The tensorflow keras models are converted to tensorflow lite integer 8 models before deploying on Himax WE-1 Plus EVB.
 
-### Input data
+### Preparation
 
 #### Features
 
@@ -66,7 +64,7 @@ The acceleration is measured by the 3-axis accelerometer on  Himax WE-1 Plus EVB
 
 <img src='./img/plot_data.png'>
 
-#### Labels
+#### Motion(Classification)
 
 We have six classes of labels, each label is mapped to a specific driving  behavior.
 
@@ -109,11 +107,11 @@ We choose a value to be the length of our training sequences, and generate the s
 | y1     | The class of motion of t<sub>start</sub> to t<sub>start+n.</sub> |
 | y2     | The information of t<sub>start+n+1</sub>.                    |
 
-<img src='./img/split_data.png' width=60% height=60%>
+<img src='./img/split_data.png' width=80% height=80%>
 
-## Classifier model
+### Classifier model
 
-### Usage
+#### Usage
 
 The classifier is a model which classifies the input sequences into six different categories of motions. The input of classifier model is the acceleration and jerk of the last *n* samples, and the output is one of the above six state.
 
@@ -121,9 +119,9 @@ The classifier is a model which classifies the input sequences into six differen
 | -------------------------------------------- | --------------------------- |
 | Latest *n* samples of acceleration and jerk. | Category of current motion. |
 
-### Structure
+#### Structure
 
-#### Inception cell
+##### Inception cell
 
 An inception cell contains two primary branches, one is bottleneck branch. A bottleneck layer is used to reduce the dimensionality of the inputs,  following  by three Conv1D layers of different kernel size to specify long-term, mid-term and short-term features. The other one is Maxpooling1D branch and follow by a Conv1D layer with kernel size equals to 1. The four Conv1D layer are concatenate along the depth dimension.
 
@@ -133,7 +131,7 @@ An inception cell contains two primary branches, one is bottleneck branch. A bot
 
 
 
-#### Complete model
+##### Complete model
 
 A complete classifier model is built by three inception cell, including one residual net work from input layer to the second
 
@@ -141,9 +139,9 @@ inception cell, and the flatten and output layers.
 
 <img src="./img/Classifier_diagram.png" width=50% height=50%>
 
-## Predictor model
+### Predictor model
 
-### Usage
+#### Usage
 
 The predictor model predict the future values of 3-axis acceleration by observing the last *n* samples.
 
@@ -151,21 +149,23 @@ The predictor model predict the future values of 3-axis acceleration by observin
 | ------------------------------------------- | ----------------------------------------------------- |
 | Latest *n* samples of acceleration and jerk | The predict values of 3-axis acceleration next sample |
 
-### Structure
+#### Structure
 
 The predictor model is built by several Conv1D and Maxpooling1D layers in the first half, and fully connected layers in the second half.
 
 <img src="./img/Predictor_diagram.png" width=30% height=20%>
 
-### Demonstration
+#### Demonstration
 
 <img src='./img/Predictor_waveform.png'>
 
 
 
-## Deploy Steps
+### Deploy Steps
 
+#### Convert to tensorflow lite models
 
+The tensorflow models must convert to tensorflow lite models before deployed to Himax WE-1 Plus EVB. Here we choose int8 as the input and output type for out models for the purpose of lighter weight and faster calculation. TFLIteConverter can be used to convert tensorflow models to tensorflow lite  models directly, and after the models are converted, we can use tf.lite.Interpreter to call our models. We can reshape the input and output while via interpreter and get the zero points and scale of int8 models.
 
 
 
@@ -174,10 +174,6 @@ The predictor model is built by several Conv1D and Maxpooling1D layers in the fi
 
 
 ## Demo
-
-|   ![](./img/cruise.gif)    |   ![](./img/start.gif)    |   ![](./img/stop.gif)   |
-| :------------------------: | :-----------------------: | :---------------------: |
-| 1_cruise (LED displays 01) | 2_start (LED displays 10) | 3_stop (LED display 11) |
 
 
 
