@@ -173,7 +173,31 @@ The tensorflow models must convert to tensorflow lite models before deployed to 
 
 
 
-## Demo
+## User Manual
+
+### Placement
+
+This device can be place on the windshield of automobile or a locomotive mobile phone holder. Before activating the system, make sure the LCD display is perpendicular to the ground.
+
+### Activation
+
+The start-up screen will appear after the device is turned on, and the system will stay on **pending mode**. Keeping the vehicle still until the system enters idle state, before that the system does not grading or detecting other motion.
+
+### Driving Mode
+
+After leaving pending mode, the system automatically detects the motion of vehicle and determines what the current state is by detected movement.  When state changes the system grades the driving behavior of  previous state from 0 to 5 stars. The LCD display shows the current state, detected movement and grade of last state(but only last for 3 seconds) while driving.
+
+### Reviewing Mode
+
+You can press the joystick to enter the reviewing mode, and select a class of motion to review the final score by push up or down the joystick, and the frequency and score are displayed on the screen, and user can read the comment  after push the joystick to right, or push left to continue to view scores. If you decide to return to driving mode, just simply press the joystick again.
+
+
+
+
+
+
+
+
 
 
 
