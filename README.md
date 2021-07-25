@@ -10,13 +10,13 @@ Our goal is to provide the users an objected way to analyze their steering style
 
 ### System Overview
 
-<img src='./img/system_overview.png' width=100% height=100%>
+<img src='./img/system_overview.png' width=100% height=100% align="center">
 
 ### Development Board and modules
 
 * **Himax WE-I Plus EVB**
 
-  <img src="./img/Himax_WE-I_Plus_EVB.jpg" style="zoom:50%;" align="left"/>
+  <img src="./img/Himax_WE-I_Plus_EVB.jpg" width="15%" align="left"/>
 
   * Endpoint AI development board
   * In collaboration with Google TensorFlow Lite for Microcontrollers framework and Synopsys embARC MLI library
@@ -26,7 +26,7 @@ Our goal is to provide the users an objected way to analyze their steering style
 
 * Arduino Pro Mini
 
-  <img src="./img/IMG_2852.jpg" style="zoom:35%;" align="left"/>
+  <img src="./img/IMG_2852.jpg" width="12%" align="left"/>
 
   * Microcontroller board based on the ATmega328
   * I2C slave for data transimission
@@ -38,14 +38,14 @@ Our goal is to provide the users an objected way to analyze their steering style
   * 2 line 16 character LCD display module with I2C converter
   * To display information for user
 
-  <img src="./img/IMG_2853.jpg" style="zoom:33%;" align="left"/>
+  <img src="./img/IMG_2853.jpg" width="33%" align="left"/>
 
 * **Joystick Module** 
 
   * Serve as user input
   * To detect Up / Down / Left / Right / Press / Release operation from user
 
-  <img src="./img/IMD-001996-600x600.jpg" style="zoom:30%;" align="left"/>
+  <img src="./img/IMD-001996-600x600.jpg" width="20%" align="left"/>
 
 * **SD Card Module**
 
