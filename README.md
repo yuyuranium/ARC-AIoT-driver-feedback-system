@@ -2,7 +2,9 @@
 
 ## Introduction
 
-The project is aiming for constructing a driver feedback system that can detect the behavior of the vehicle and analyze the steering style of the driver. 
+The project is aiming for constructing a driver feedback system that can detect the behavior of the vehicle and analyze the steering style of the driver. The hardware device is place on the vehicle and receiving the acceleration while driving, and the software determines the actual driving behavior and scores. 
+
+Our goal is to provide the users an objected way to analyze their steering styles, and giving some suggestions for approving driving skill, bringing up safer driving habits and  more efficient steering method.
 
 ## Develop Board/Module (till May 30th)
 
@@ -68,7 +70,7 @@ The acceleration is measured by the 3-axis accelerometer on  Himax WE-1 Plus EVB
 
 We have six classes of labels, each label is mapped to a specific driving  behavior.
 
-| Label | State      | Condition of vehicle    |
+| Label | Motion     | Condition of vehicle    |
 | :---: | ---------- | ----------------------- |
 |   0   | Idle       | Stay still              |
 |   1   | Cruise     | Cruise with fixed speed |
