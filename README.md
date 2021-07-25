@@ -16,7 +16,7 @@ Our goal is to provide the users an objected way to analyze their steering style
 
 * **Himax WE-I Plus EVB**
 
-  <img src="./img/Himax_WE-I_Plus_EVB.jpg" width="15%" align="left"/>
+  <img src="./img/Himax_WE-I_Plus_EVB.jpg" width="15%" align="right"/>
 
   
 
@@ -28,7 +28,7 @@ Our goal is to provide the users an objected way to analyze their steering style
 
 * Arduino Pro Mini
 
-  <img src="./img/IMG_2852.jpg" width="12%" align="left"/>
+  <img src="./img/IMG_2852.jpg" width="12%" align="right"/>
 
   
 
@@ -39,7 +39,7 @@ Our goal is to provide the users an objected way to analyze their steering style
 
 * **LCD 1602A**
 
-  <img src="./img/IMG_2853.jpg" width="33%" align="left"/>
+  <img src="./img/IMG_2853.jpg" width="33%" align="right"/>
 
   
 
@@ -48,7 +48,7 @@ Our goal is to provide the users an objected way to analyze their steering style
 
 * **Joystick Module** 
 
-  <img src="./img/IMD-001996-600x600.jpg" width="20%" align="left"/>
+  <img src="./img/IMD-001996-600x600.jpg" width="20%" align="right"/>
 
   
 
