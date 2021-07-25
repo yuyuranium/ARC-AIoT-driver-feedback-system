@@ -14,9 +14,9 @@ Our goal is to provide the users an objected way to analyze their steering style
 
 ### Development Board and modules
 
-* **Himax WE-I Plus EVB**
+<img src="./img/Himax_WE-I_Plus_EVB.jpg" width="10%" align="right"/>
 
-  <img src="./img/Himax_WE-I_Plus_EVB.jpg" width="15%" align="right"/>
+* **Himax WE-I Plus EVB**
 
   * Endpoint AI development board
   * In collaboration with Google TensorFlow Lite for Microcontrollers framework and Synopsys embARC MLI library
@@ -24,25 +24,26 @@ Our goal is to provide the users an objected way to analyze their steering style
   * 2 TFLite models deployed on board
   * I2C master for data transimission
   
-* Arduino Pro Mini
+  
+<img src="./img/IMG_2852.jpg" width="8%" align="right"/>
 
-  <img src="./img/IMG_2852.jpg" width="12%" align="right"/>
+* Arduino Pro Mini
 
   * Microcontroller board based on the ATmega328
   * I2C slave for data transimission
   * Serve as the handler for human-machine interface
   * Use digital pin to simulate I2C master to communicate with LCD display
   
-* **LCD 1602A**
+<img src="./img/IMG_2853.jpg" width="20%" align="right"/>
 
-  <img src="./img/IMG_2853.jpg" width="33%" align="right"/>
+* **LCD 1602A**
 
   * 2 line 16 character LCD display module with I2C converter
   * To display information for user
   
+<img src="./img/IMD-001996-600x600.jpg" width="12%" align="right"/>
+  
 * **Joystick Module** 
-
-  <img src="./img/IMD-001996-600x600.jpg" width="20%" align="right"/>
 
   * Serve as user input
   * To detect Up / Down / Left / Right / Press / Release operation from user
