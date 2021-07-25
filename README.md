@@ -2,177 +2,149 @@
 
 ## Introduction
 
-The project is aiming for constructing a driver feedback system that can detect the behavior of the vehicle and analyze the steering style of the driver. The hardware device is place on the vehicle and receiving the acceleration while driving, and the software determines the actual driving behavior and scores. 
+The project is aiming for constructing a driver feedback system that can detect the behavior of the vehicle and analyze the steering style of the driver. The hardware device is place on the vehicle and receiving the acceleration data while driving, and the software determines the actual driving behavior and scores. 
 
 Our goal is to provide the users an objected way to analyze their steering styles, and giving some suggestions for approving driving skill, bringing up safer driving habits and  more efficient steering method.
 
-## Develop Board/Module (till May 30th)
+## Hardware / Software Setup
 
-![](./img/IMG_2381.JPG)
+### System Overview
 
-* Himax WE-1 Plus EVB
-  * Edge AI development board, for real time inference
-  * Labeling
-    * Master device on I2C for accelerometer data transmission when labeling
-  * Inference time
-    * Master device on I2C for detection result transmission during inference time
-  * [Source Code](./himax_we1_evb)
-* Arduino Nano
-  * Simple development board 
-  * Labeling
-    * Slave device on I2C to receive data from Himax WE-1 Plus EVB and write it to SD card
-  * Inference time
-    * Slave device on I2C to receive detection result and display it via LEDs
-  * [Source Code](./arduino)
-* Micro SD Card Module
-  * Record data when labeling
+<img src='./img/system_overview.png' width=100% height=100%>
 
-## System Overview
+### Development Board and modules
 
-<img src='./img/system_overview.png' width= 100% height=100%>
+* **Himax WE-I Plus EVB**
 
+  <img src="./img/Himax_WE-I_Plus_EVB.jpg" style="zoom:50%;" align="left"/>
 
+  * Endpoint AI development board
+  * In collaboration with Google TensorFlow Lite for Microcontrollers framework and Synopsys embARC MLI library
+  * Collect acceleration data by the built 3-axis accelerometer
+  * 2 TFLite models deployed on board
+  * I2C master for data transimission
 
+* Arduino Pro Mini
 
+  <img src="./img/IMG_2852.jpg" style="zoom:35%;" align="left"/>
 
-## Hardware Architecture
+  * Microcontroller board based on the ATmega328
+  * I2C slave for data transimission
+  * Serve as the handler for human-machine interface
+  * Use digital pin to simulate I2C master to communicate with LCD display
 
+* **LCD 1602A**
 
+  * 2 line 16 character LCD display module with I2C converter
+  * To display information for user
 
+  <img src="./img/IMG_2853.jpg" style="zoom:33%;" align="left"/>
 
+* **Joystick Module** 
 
-## Schematic Diagram
+  * Serve as user input
+  * To detect Up / Down / Left / Right / Press / Release operation from user
 
-TBD.
+  <img src="./img/IMD-001996-600x600.jpg" style="zoom:30%;" align="left"/>
 
-## Models
+* **SD Card Module**
 
-[Source code](./train/Colab Notebooks/SafeDriver.ipynb)
+  * To record the grading history (TBD)
 
-### Platform
+* **CP2102 Micro USB to TTL Module (optional)**
 
-We use tensorflow functional API to build our models. Tensorflow functional API provides us a more flexibility  way to build models while using self-defined residual network and branch structure.
+  * Connected with Micro USB to supply power to the system
+  * 5V for Arduino
+  * 3.3V for Himax WE-I Plus EVB
 
-The tensorflow keras models are converted to tensorflow lite integer 8 models before deploying on Himax WE-1 Plus EVB.
+### Schematic Diagram
 
-### Preparation
+<img src="./img/hardware_architecture.png" style="zoom:80%;" />
 
-#### Features
+Follow the schematic diagram and connect all components in place, then the system are ready to go for software setup.
 
-* 3-axis acceleration
-* 3-axis jerk
+### Compile Source Codes for Himax WE-I Plus EVB
 
-The acceleration is measured by the 3-axis accelerometer on  Himax WE-1 Plus EVB with 25 Hertz sampling rate, and jerk is the derivative of acceleration.
+At the root of the repository, we first change the directory to the source code:
 
-<img src='./img/plot_data.png'>
+```bash
+$ cd ./himax_we1_evb/driver_feedback_system
+```
 
-#### Motion(Classification)
+Then execute the command to compile the source code and flash a image file:
 
-We have six classes of labels, each label is mapped to a specific driving  behavior.
+```bash
+$ make
+$ make flash
+```
 
-| Label | Motion     | Condition of vehicle    |
-| :---: | ---------- | ----------------------- |
-|   0   | Idle       | Stay still              |
-|   1   | Cruise     | Cruise with fixed speed |
-|   2   | Accelerate | Speed up                |
-|   3   | Brake      | Speed down              |
-|   4   | Left       | Turn left               |
-|   5   | Right      | Turn right              |
+### Burn the program to Himax WE-I Plus EVB
 
-### Work flow of data preprocessing
+Open the serial application of your choice to upload the generated image file to the development board.
 
-<h4 id="workflow1">Separate training and valid data</h4>
+Here we take [Minicom](https://linux.die.net/man/1/minicom) as example:
 
-We separate the training and valid files in the beginning, which means the data from a single file are either in training dataset or valid dataset. In this step, the features in CSV files are read and the labels are converted to one-hot format.
+Open Minicom setup (may need super user permission), via: 
 
-<h4 id="workflow2">Split data by classes</h4>
+```bash
+$ minicom -S
+```
 
-Separating the data by their labels, observing the size of each class of data and deciding how to balance the data by augmentation.
+Inside the setup, set `Bps/Par/Bits` to `115200` , `Hardware Flow Control` and `Software Flow Control` to `No` .
 
-<h4 id="workflow3">Data augmentation</h4>
+Exit the setup and open the Serial Device of Himax WE-I Plus EVB. If it is the first device you plugged into the USB connector on your computer, then it would be ad /dev/ttyUSB0.
 
-Using rotation matrix and multiply with some original data to generate new training data.
+Use the Xmodem protocol to upload the image file:
 
-<h4 id="workflow4">Normalization</h4>
+1. Keep pressing '1' on your keyboard
 
-Calculating the mean values and standard deviations of each features, and normalize the data using the format: 
+2. Press the reset button on the development board
 
-<img src="http://chart.googleapis.com/chart?cht=tx&chl= N(x) = (x - \bar{x})/\sigma" style="border:none;">
+3. Then the information you get may be like this
 
-<h4 id="workflow5">Split sequences for training models</h4>
+   ```
+   -----------------------------------------------------------
+    Himax WEI Boot loader
+   ------------------------------------------------------------
+   
+   embARC Build Time: Jan  4 2021, 13:44:14
+   Compiler Version: Metaware, 4.2.1 Compatible Clang 8.0.1
+   Boot loader Version : 1.4.4 (Date:Jan  4 2021)
+   chip version : 0x8535a1
+   cpu speed : 400000000 hz
+   spi speed : 50000000 hz
+   wake up evt:4
+   -----------------------------------------------------------
+   [0] return to bootup
+   [1] Xmodem download and burn FW image
+   ------------------------------------------------------------
+   
+   
+   Send data using the xmodem protocol from your terminal
+   CCCCCC
+   ```
 
-We choose a value to be the length of our training sequences, and generate the sequences for training and validation. The output *x* is the training sequence, containing the consequent time series signals of length *30*, *y1* is the category of motion in the duration of  *x*, and *y2* is the information after the time of  *x*. Both models has the common input training data *x* , but *y1* is for **classifier** model, and *y2* is for **predictor** model.
+4. Press 'Ctrl-A' (keybinding for Minicom command) then 's' to enter data sending setup.
 
-| Output | Meaning                                                      |
-| ------ | ------------------------------------------------------------ |
-| x      | Time series of information from t<sub>start</sub> to t<sub>start+n</sub>. |
-| y1     | The class of motion of t<sub>start</sub> to t<sub>start+n.</sub> |
-| y2     | The information of t<sub>start+n+1</sub>.                    |
+5. Choose `xmodem`  then specify the image file `output_gnu.img` to upload.
 
-<img src='./img/split_data.png' width=80% height=80%>
+6. Once uploading is done, press any  key on your keyboard and reset the Himax WE-I Plus EVB.
 
-### Classifier model
+7. Done. The code will be running on it.
 
-#### Usage
+### Uploading the Arduino Program
 
-The classifier is a model which classifies the input sequences into six different categories of motions. The input of classifier model is the acceleration and jerk of the last *n* samples, and the output is one of the above six state.
+At the root of the repository, we first change the directory to the source code:
 
-| Input                                        | Output                      |
-| -------------------------------------------- | --------------------------- |
-| Latest *n* samples of acceleration and jerk. | Category of current motion. |
+```bash
+$ cd ./arduino/driver_feedback_system
+```
 
-#### Structure
+Open the source code `driver_feedback_system.ino` with **Arduino IDE**. Specify the Board you are using. For this project **Arduino Pro or Pro Mini** is selected. Then choose the Proccessor if needed, for example, **Atmega328P (5V, 16MHz)** is specified. Finally, choose the correct Serial port for Arduino.
 
-##### Inception cell
+Click the upload button on the up-left corner and wait for magic to take place.
 
-An inception cell contains two primary branches, one is bottleneck branch. A bottleneck layer is used to reduce the dimensionality of the inputs,  following  by three Conv1D layers of different kernel size to specify long-term, mid-term and short-term features. The other one is Maxpooling1D branch and follow by a Conv1D layer with kernel size equals to 1. The four Conv1D layer are concatenate along the depth dimension.
-
-
-
-<img src="./img/inception_cell.png" width=70% height=70%>
-
-
-
-##### Complete model
-
-A complete classifier model is built by three inception cell, including one residual net work from input layer to the second
-
-inception cell, and the flatten and output layers.
-
-<img src="./img/Classifier_diagram.png" width=50% height=50%>
-
-### Predictor model
-
-#### Usage
-
-The predictor model predict the future values of 3-axis acceleration by observing the last *n* samples.
-
-| Input                                       | Output                                                |
-| ------------------------------------------- | ----------------------------------------------------- |
-| Latest *n* samples of acceleration and jerk | The predict values of 3-axis acceleration next sample |
-
-#### Structure
-
-The predictor model is built by several Conv1D and Maxpooling1D layers in the first half, and fully connected layers in the second half.
-
-<img src="./img/Predictor_diagram.png" width=30% height=20%>
-
-#### Demonstration
-
-<img src='./img/Predictor_waveform.png'>
-
-
-
-### Deploy Steps
-
-#### Convert to tensorflow lite models
-
-The tensorflow models must convert to tensorflow lite models before deployed to Himax WE-1 Plus EVB. Here we choose int8 as the input and output type for out models for the purpose of lighter weight and faster calculation. TFLIteConverter can be used to convert tensorflow models to tensorflow lite  models directly, and after the models are converted, we can use tf.lite.Interpreter to call our models. We can reshape the input and output while via interpreter and get the zero points and scale of int8 models.
-
-
-
-
-
+If you have a problem burning the program to Arduino Pro Mini, google it to find out a solution suitable for your device.
 
 
 ## User Manual
@@ -183,17 +155,93 @@ This device can be place on the windshield of automobile or a locomotive mobile 
 
 ### Activation
 
-The start-up screen will appear after the device is turned on, and the system will stay on **pending mode**. Keeping the vehicle still until the system enters idle state, before that the system does not grading or detecting other motion.
+The start-up screen will appear after the device is turned on, and the system will stay on **Pending mode**. Keep the vehicle still until the system enters **Idle state**. Not until the vehicle have been idling for a while will the system begins grading or detecting other motions.
 
 ### Driving Mode
 
-After leaving pending mode, the system automatically detects the motion of vehicle and determines what the current state is by detected movement.  When state changes the system grades the driving behavior of  previous state from 0 to 5 stars. The LCD display shows the current state, detected movement and grade of last state(but only last for 3 seconds) while driving.
+After leaving pending mode, the system automatically detects the motion of vehicle and determines what the current state is by detected movement i.e., the motion.  When state changes the system grades the driving behavior of  previous state from 0 to 5 stars. The LCD display shows the current state, detected movement and grade of last state (but only last for 3 seconds) while driving.
+
+The Information on the LCD may be like this format:
+
+```
+LCD:
+    +-----------------+     +-----------------+     +-----------------+
+    |  [Idle]       + |     |  Start-off?   + |     | [Start-off]   + |
+    | $Brake: 4.5     | --> | Grading ...     | --> | Grading ...     |
+    +-----------------+     +-----------------+     +-----------------+
+
+    "[Idle]" or "[Start-off]": The current state that the vehicle is in.
+    "Start-off?": The system guess that you are starting-off but not sure enough
+    "+": The detected motion or the movement that is taking place, "+" for acceleration.
+    "$Brake": The previous state that has been graded by the system.
+    "4.5": Number of stars you got by performing the movement.
+```
+
+The state information is display as:
+
+| States                        | Strong state  | Weak State    |
+| ----------------------------- | ------------- | ------------- |
+| Initial                       | `[Initial]`   | N/A           |
+| Pending                       | `[Pending]`   | N/A           |
+| Idling                        | `[Idle]`      | ` Idle?`      |
+| Starting-off                  | `[Start-off]` | ` Start-off?` |
+| Braking (or coming to a halt) | `[Brake]`     | ` Brake?`     |
+| Turning left                  | `[Left]`      | ` Left?`      |
+| Turning right                 | `[Right]`     | ` Right?`     |
+| Speeding up (Acceleration)    | `[Accel]`     | ` Accel?`     |
+
+The detected motion or movement is display as:
+
+| Motion / Movement | Symbol              |
+| ----------------- | ------------------- |
+| Unknown           | `.` (period or dot) |
+| Idle              | `_` (underscore)    |
+| Acceleration      | `+` (plus sign)     |
+| Brake             | `-` (minus sign)    |
+| Left              | `<`                 |
+| Right             | `>`                 |
+
+Note that that **Motion** is different from **State** . The evident difference is that states are consistent but motions are not, that is, a state must last for a while while a motion is possible to appear only on one frame. The accumulation of consistent motion triggers the state transition. If a given motion is detected and lasts long enough, then the state will transition to corresponding state. For example, if your vehicle are starting-off from still (i.e., idle), the **Acceleration** motion is very likely to be detected many times. As the accumulation reaches the threshold, the transition from **Idle** state to **Starting-off** state will occur.
 
 ### Reviewing Mode
 
-You can press the joystick to enter the reviewing mode, and select a class of motion to review the final score by push up or down the joystick, and the frequency and score are displayed on the screen, and user can read the comment  after push the joystick to right, or push left to continue to view scores. If you decide to return to driving mode, just simply press the joystick again.
+You can press the joystick to enter the reviewing mode, and select a class of motion to review the final score by push up or down the joystick. The number of occurrences and score are displayed on the screen, and user can read the comment  after push the joystick to the right, or push to the left to continue to view scores of other classes. If you decide to return to driving mode, just simply press the joystick again.
+
+The Information of **Reviewing mode** on the LCD may be like this format:
+
+```
+LCD:
+    +-----------------+
+    | $Start-off: N/A |
+    | Total: 0     D  |
+    +-----------------+
+    |
+    | Press down
+    v
+    +-----------------+   Push right   +-----------------+
+    | $Brake: 4.5     | -------------> |<Very good!      |
+    | Total: 87   UD> | <------------- | Try to keep it  |
+    +-----------------+   Push left    +-----------------+
+    |
+    | Press down
+    v
+    +-----------------+   Push right   +-----------------+
+    | $Brake: 0.4     | -------------> |<You may be      |
+    | Total: 3    UD> | <------------- | a Sambao        |
+    +-----------------+   Push left    +-----------------+
+    |
+    ...
+```
 
 
+
+
+
+## Demo
+
+Please refer to ppt for now
+
+A collection of adorable gifs will be posted later
 
 
 
