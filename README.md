@@ -64,6 +64,8 @@ The tensorflow keras models are converted to tensorflow lite integer 8 models be
 
 The acceleration is measured by the 3-axis accelerometer on  Himax WE-1 Plus EVB with 25 Hertz sampling rate, and jerk is the derivative of acceleration.
 
+<img src='./img/plot_data.png' align='left'>
+
 #### Labels
 
 We have six classes of labels, each label is mapped to a specific driving  behavior.
@@ -95,9 +97,7 @@ Using rotation matrix and multiply with some original data to generate new train
 
 Calculating the mean values and standard deviations of each features, and normalize the data using the format: 
 
-$$
-N(x) = (x - \bar{x})/\sigma
-$$
+<img src="http://chart.googleapis.com/chart?cht=tx&chl= N(x) = (x - \bar{x})/\sigma" style="border:none;">
 
 <h4 id="workflow5">Split sequences for training models</h4>
 
@@ -111,6 +111,8 @@ We choose a value to be the length of our training sequences, and generate the s
 
 <img src="./img/split_data.png" width=60% height=60% align='left'>
 
+
+
 ## Classifier model
 
 ### Usage
@@ -123,13 +125,15 @@ The classifier is a model which classifies the input sequences into six differen
 
  ### Structure
 
-####　Inception cell
+#### Inception cell
 
-An inception cell contains two primary branches, one is bottleneck branch. A bottleneck layer is used to reduce the dimensionality of the inputs,  following  by three convolutional layers of different kernel size to specify long-term, mid-term and short-term features. The other one is maxpooling branch and follow by a convolutional layer with kernel size equals to 1. The four convolutional layer are concatenate along the depth dimension.
+An inception cell contains two primary branches, one is bottleneck branch. A bottleneck layer is used to reduce the dimensionality of the inputs,  following  by three Conv1D layers of different kernel size to specify long-term, mid-term and short-term features. The other one is Maxpooling1D branch and follow by a Conv1D layer with kernel size equals to 1. The four Conv1D layer are concatenate along the depth dimension.
 
 
 
 <img src="./img/inception_cell.png" width=70% height=70% align='left'>
+
+
 
 #### Complete model
 
@@ -151,7 +155,15 @@ The predictor model predict the future values of 3-axis acceleration by observin
 
 ### Structure
 
+The predictor model is built by several Conv1D and Maxpooling1D layers in the first half, and fully connected layers in the second half.
+
 <img src="./img/Predictor_diagram.png" width=30% height=20% align='left'>
+
+### Demonstration
+
+<img src='./img/Predictor_waveform.png'>
+
+
 
 ## Deploy Steps
 
