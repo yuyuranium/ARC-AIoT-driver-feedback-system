@@ -123,7 +123,7 @@ The classifier is a model which classifies the input sequences into six differen
 | -------------------------------------------- | --------------------------- |
 | Latest *n* samples of acceleration and jerk. | Category of current motion. |
 
- ### Structure
+### Structure
 
 #### Inception cell
 
