@@ -1,5 +1,26 @@
 # ARC-AIoT-driver-feedback-system
 
+### Table of Contents
+
+* [Introduction](#introduction)
+* [Hardware / Software Setup](#hardware--software-setup)
+  * [System Overview](#system-overview)
+  * [Close-up Views](#close-up-views)
+  * [Development Board and modules](#development-board-and-modules)
+  * [Schematic Diagram](#schematic-diagram)
+  * [Compile Source Codes for Himax WE-I Plus EVB](#compile-source-codes-for-himax-we-i-plus-evb)
+  * [Burn the program to Himax WE-I Plus EVB](#burn-the-program-to-himax-we-i-plus-evb)
+  * [Uploading the Arduino Program](#uploading-the-arduino-program)
+  * [What are the Programs Doing?](#what-are-the-programs-doing)
+* [User Manual](#user-manual)
+  * [Placement](#placement)
+  * [Activation](#activation)
+  * [Driving Mode](#driving-mode)
+  * [Reviewing Mode](#reviewing-mode)
+* [Demo](#demo)
+  * [Driving Mode](#driving-mode-1)
+  * [Reviewing Mode](#reviewing-mode-1)
+
 ## Introduction
 
 The project is aiming for constructing a driver feedback system that can detect the behavior of the vehicle and analyze the steering style of the driver. The hardware device is placed on the vehicle and receiving the acceleration data while driving, and the software determines the actual driving behavior and scores. 
@@ -14,7 +35,7 @@ Our goal is to provide the users an objected way to analyze their steering style
 
 <img src='./img/system_overview.png' width=100% height=100% align="center">
 
-### Close Up Views
+### Close-up Views
 
 | Front                                              | Rear                                               |
 | -------------------------------------------------- | -------------------------------------------------- |
