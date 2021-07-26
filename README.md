@@ -25,6 +25,7 @@ Our goal is to provide the users an objected way to analyze their steering style
   * I2C master for data transimission
   
   
+
 <img src="./img/IMG_2852.jpg" width="8%" align="right"/>
 
 * Arduino Pro Mini
@@ -33,16 +34,16 @@ Our goal is to provide the users an objected way to analyze their steering style
   * I2C slave for data transimission
   * Serve as the handler for human-machine interface
   * Use digital pin to simulate I2C master to communicate with LCD display
-  
+
 <img src="./img/IMG_2853.jpg" width="20%" align="right"/>
 
 * **LCD 1602A**
 
   * 2 line 16 character LCD display module with I2C converter
   * To display information for user
-  
+
 <img src="./img/IMD-001996-600x600.jpg" width="12%" align="right"/>
-  
+
 * **Joystick Module** 
 
   * Serve as user input
