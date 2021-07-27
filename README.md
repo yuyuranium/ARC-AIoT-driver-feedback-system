@@ -9,7 +9,7 @@
   * [Development Board and modules](#development-board-and-modules)
   * [Schematic Diagram](#schematic-diagram)
   * [Compile Source Codes for Himax WE-I Plus EVB](#compile-source-codes-for-himax-we-i-plus-evb)
-  * [Burn the program to Himax WE-I Plus EVB](#burn-the-program-to-himax-we-i-plus-evb)
+  * [Burn the Program to Himax WE-I Plus EVB](#burn-the-program-to-himax-we-i-plus-evb)
   * [Uploading the Arduino Program](#uploading-the-arduino-program)
   * [What are the Programs Doing?](#what-are-the-programs-doing)
 * [User Manual](#user-manual)
@@ -109,7 +109,7 @@ $ make
 $ make flash
 ```
 
-### Burn the program to Himax WE-I Plus EVB
+### Burn the Program to Himax WE-I Plus EVB
 
 Open the serial application of your choice to upload the generated image file to the development board.
 
@@ -252,7 +252,7 @@ The detected motion or movement is display as:
 | Left              | `<` (less-than sign)    |
 | Right             | `>` (greater-than sign) |
 
-Note that that **Motion** is different from **State** . The evident difference is that states are consistent but motions are not, that is, a state must last for a while while a motion is possible to appear only on one frame. The accumulation of consistent motion triggers the state transition. If a given motion is detected and lasts long enough, then the state will transition to corresponding state. For example, if your vehicle are starting-off from still (i.e., idle), the **Acceleration** motion is very likely to be detected many times. As the accumulation reaches the threshold, the transition from **Idle** state to **Starting-off** state will occur.
+Note that **Motion** is different from **State** . The evident difference is that states are consistent but motions are not, that is, a state must last for a while while a motion has a probability to appear only on one frame. The accumulation of consistent motion triggers the state transition. If a given motion is detected and lasts long enough, then the state will transition to the corresponding state. For example, if your vehicle are starting-off from still (i.e., idle), the **Acceleration** motion is very likely to be detected many times. As the accumulation of the motion reaches the threshold, the transition from **Idle** state to **Starting-off** state will take place.
 
 ### Reviewing Mode
 
@@ -309,6 +309,10 @@ LCD:
 * Grading **Brake**
 
   ![](./img/Brake.gif)
+  
+* Grading **Cruise** then **Brake** than **Right**
+
+  ![](./img/Right.gif)
 
 ### Reviewing Mode
 
