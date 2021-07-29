@@ -1,21 +1,20 @@
 #include <SoftwareSerial.h>
+#include <LCDSoftI2C.h>
 #include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
 
 #define SLAVE_ADDRESS 0x12
-#define L 0
-#define R 1
 #define SERIAL_BAUD 115200
 #define BTSERIAL_BAUD 38400
 
 const uint8_t kData = 7;  // ax, ay, az, jx, jy, jz, class
-const uint8_t kLeds = 2;
-const uint8_t kHimaxPinOut = 2;
-const uint8_t kSdPinOut = 5;
-const uint8_t kLedPinOut[kLeds] = { 7, 8 };
+const uint8_t kMotions = 6;
+const uint8_t kHimaxPinOut = 9;
+const uint8_t kSdPinOut = 10;
 const unsigned long kDebounceDuration = 2000;  // 2 s
 const char *kDataName[kData] = { "ax", "ay", "az", "jx", "jy", "jz", "class" };
+const char kMotionSymbols[kMotions] = { '_', '=', '+', '-', '<', '>' };
 
 unsigned long regret_trigger_time;
 uint8_t class_type;
@@ -23,7 +22,8 @@ int file_counter;
 boolean busy;
 char val;
 
-SoftwareSerial BTSerial(A2, A3);
+SoftwareSerial BTSerial(A2, A1);
+LCDSoftI2C lcd(0x27, 16, 2);
 File data_entry;
 
 typedef union {
@@ -32,10 +32,17 @@ typedef union {
 } floatData;
 
 void setup() {
+  // lcd setup
+  lcd.init();
+  lcd.backlight();
+  LCDShowMsg("BT Data", "Collecter");
+  delay(1000);
+  LCDShowMsg("By Southerner", "NCKU CASLab");
+  delay(1000);
+  
   Serial.begin(SERIAL_BAUD);
 
-  // bluetooth setup
-  BTSerial.begin(BTSERIAL_BAUD);
+  
   
   // himax eable setup
   pinMode(kHimaxPinOut, OUTPUT);
@@ -45,18 +52,11 @@ void setup() {
   Wire.begin(SLAVE_ADDRESS);
   Wire.onReceive(receiveEvent);
 
-  // led setup
-  pinMode(kLedPinOut[L], OUTPUT);
-  pinMode(kLedPinOut[R], OUTPUT);
-  digitalWrite(kLedPinOut[L], LOW);
-  digitalWrite(kLedPinOut[R], LOW);
-
   // SD card setup
   while (!SD.begin(kSdPinOut)) {
     // slowly blink 2 leds to indicate sd card error
     // wait until no error
-    digitalWrite(kLedPinOut[L], !digitalRead(kLedPinOut[R]));  // sync with R
-    digitalWrite(kLedPinOut[R], !digitalRead(kLedPinOut[R]));
+    LCDShowMsg("SD card", "Init failed");
     delay(500);
   }
 
@@ -70,9 +70,12 @@ void setup() {
   do {
     sprintf(filename, "%d.csv", ++file_counter);
   } while (SD.exists(filename));  // initialize file_counter with latest file count
+  LCDShowMsg("Label begin:", filename);
+  delay(1000);
   regret_trigger_time = millis();
-  digitalWrite(kLedPinOut[L], LOW);
-  digitalWrite(kLedPinOut[R], LOW);
+
+  // bluetooth setup
+  BTSerial.begin(BTSERIAL_BAUD);
 }
 
 void loop() {
@@ -82,49 +85,55 @@ void loop() {
       if (val == 's') {
         // disable himax, blow out the leds, write file and change state
         digitalWrite(kHimaxPinOut, LOW);
-        digitalWrite(kLedPinOut[L], LOW);
-        digitalWrite(kLedPinOut[R], LOW);
         data_entry.flush();
         data_entry.close();
         class_type = -1;
         busy = false;
         Serial.println("Done");
+        // LCDShowMsg("Writing", "Done");
       } else if (val <= '5' && val >= '0') {
         // reading class type, convert char to int
         class_type = val - '0';
+        lcd.setCursor(0, 1);
+        lcd.print("Labeling: ");
+        lcd.print(class_type);
       }
     } else {
       if (val == 's') {
         busy = false;  // remain the same
+        LCDShowMsg("[P]", "Pending ...");
       } else if (val == 'r' && debounce_regret()) {
         // to avoid double clicking
         // on regret, find the file and delete it
-        char filename[10];
+        char filename[10], buf[17];
         sprintf(filename, "%d.csv", file_counter - 1);
+        lcd.setCursor(0, 0);
+        lcd.print("[R]: ");
+        lcd.print(filename);
         if (SD.exists(filename) && SD.remove(filename)) {
           Serial.print("Deleting: ");
           Serial.println(filename);
           --file_counter;
-          // lit the led for 1 sec to indicate job done
-          digitalWrite(kLedPinOut[L], HIGH);
-          digitalWrite(kLedPinOut[R], HIGH);
+          lcd.setCursor(0, 1);
+          lcd.println("Done");
           delay(1000);
-          digitalWrite(kLedPinOut[L], LOW);
-          digitalWrite(kLedPinOut[R], LOW);
+          // lit the led for 1 sec to indicate job done
+
         } else {
           // fast blink 2 times to indicate error
-          for (int i = 0; i < 4; ++i) {
-            digitalWrite(kLedPinOut[L], !digitalRead(kLedPinOut[R]));  // sync with R
-            digitalWrite(kLedPinOut[R], !digitalRead(kLedPinOut[R]));
-            delay(100);
-          }
+          lcd.setCursor(0, 1);
+          lcd.println("Failed        ");
+          delay(1000);
         }
       } else if (val <= '5' && val >= '0') {
         char filename[10];
-        sprintf(filename, "%d.csv", file_counter++);
+        do {
+          sprintf(filename, "%d.csv", file_counter++);
+        } while (SD.exists(filename));
         data_entry = SD.open(filename, FILE_WRITE);
-        Serial.print("Writing: ");
-        Serial.println(filename);
+        lcd.setCursor(0, 0);
+        lcd.print("[W]: ");
+        lcd.print(filename);
         int i;
         for (i = 0; i < kData - 1; ++i) {
           data_entry.print(kDataName[i]);
@@ -156,40 +165,6 @@ void receiveEvent(int count) {
     }
     Serial.println(class_type);
     data_entry.println(class_type);
-    // update leds
-    switch (class_type) {
-      case 0:
-        // blink 2
-        digitalWrite(kLedPinOut[L], !digitalRead(kLedPinOut[R]));  // sync with R
-        digitalWrite(kLedPinOut[R], !digitalRead(kLedPinOut[R]));
-        break;
-      case 1:
-        digitalWrite(kLedPinOut[L], LOW);
-        digitalWrite(kLedPinOut[R], HIGH);
-        break; 
-      case 2:
-        digitalWrite(kLedPinOut[L], HIGH);
-        digitalWrite(kLedPinOut[R], LOW);
-        break;
-      case 3:
-        digitalWrite(kLedPinOut[L], HIGH);
-        digitalWrite(kLedPinOut[R], HIGH);
-        break;
-      case 4:
-        // blink L
-        digitalWrite(kLedPinOut[L], !digitalRead(kLedPinOut[L]));
-        digitalWrite(kLedPinOut[R], LOW);
-        break;
-      case 5:
-        // blink R
-        digitalWrite(kLedPinOut[L], LOW);
-        digitalWrite(kLedPinOut[R], !digitalRead(kLedPinOut[R]));
-        break;
-      default:
-        digitalWrite(kLedPinOut[L], LOW);
-        digitalWrite(kLedPinOut[R], LOW);
-        break;
-    }
   } else {
     // this should not happen, but just consume all unnecessary data in case it fails
     while (Wire.available())
@@ -207,4 +182,15 @@ boolean debounce_regret() {
     regret_trigger_time = now;
     return false;
   }
+}
+
+
+void LCDShowMsg(char *row1, char *row2) {
+  char buf1[17], buf2[17];
+  sprintf(buf1, "%-16s", row1);
+  sprintf(buf2, "%-16s", row2);
+  lcd.setCursor(0, 0);
+  lcd.print(buf1);
+  lcd.setCursor(0, 1);
+  lcd.print(buf2);
 }

@@ -3,7 +3,6 @@
 #include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
-#include <Wire.h> 
 
 #define SLAVE_ADDRESS 0x12
 #define L 0
@@ -28,7 +27,7 @@ const char kMotionSymbols[kMotions] = { '_', '=', '+', '-', '<', '>' };
 const char *kStateNames[kStates] = {
   "[Initial]",
   " Idle?",
-  " Start-off?",driver
+  " Start-off?",
   " Brake?",
   " Left?",
   " Right?",

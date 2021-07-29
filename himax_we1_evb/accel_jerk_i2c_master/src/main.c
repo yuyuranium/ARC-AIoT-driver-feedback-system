@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
   else
     hx_drv_uart_print("LED RED initialized: Error\n");
 
-  if (hal_gpio_init(&hal_gpio_arduino_in, HX_DRV_PGPIO_2, HX_DRV_GPIO_INPUT,
+  if (hal_gpio_init(&hal_gpio_arduino_in, HX_DRV_PGPIO_0, HX_DRV_GPIO_INPUT,
                     GPIO_PIN_RESET) == HAL_OK)
     hx_drv_uart_print("GPIO ARDUINO IN initialized: OK\n");
   else
