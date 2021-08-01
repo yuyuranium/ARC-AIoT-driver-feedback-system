@@ -11,7 +11,7 @@
 #define Z 2
 
 const float kLPFBeta = 0.25;
-const float kSamplingPeriod = 0.04;
+const float kSamplingPeriod = 0.025;
 const uint32_t kClkRate = 400000000;
 const uint32_t kSamplingCycle = kSamplingPeriod*kClkRate;
 const uint8_t kDataHimax = 6;
