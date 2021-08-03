@@ -1,15 +1,25 @@
 #include "accelerometer_handler.h"
 #include "constants.h"
 #include "hx_drv_tflm.h"
-#include <cstdio>
+#include <cmath>
 
 namespace {
 // Beta of LPF
 constexpr float kLPFBeta = 0.25;
 // Sampling parameters
-constexpr float kSamplingPeriod = 0.04;
+constexpr float kSamplingPeriod = 0.025;
 constexpr uint32_t kClkRate = 400000000;
 constexpr uint32_t kSamplingCycle = kSamplingPeriod*kClkRate;
+// Normalization parameters
+float accel_mean[3] = {
+  0.9487810621465815, 0.03946548768500278, 0.06886678821127502 };
+float jerk_mean[3] = {
+  -0.00326175719059994, 0.001484422197827616, 0.009953398211114467 };
+float accel_std[3] = {
+  0.1313167093450731, 0.11926362940605395, 0.17273308090512682 };
+float jerk_std[3] = {
+  2.3153819130934132, 1.803095985733507, 2.2968154997810615 };
+uint32_t calibration_count = 0;
 // Ring buffer size
 constexpr int kRingBufferSize = 180;  // 6 * 60
 // Ring buffers for both models
@@ -24,7 +34,7 @@ float raw_ax, raw_ay, raw_az;
 // Timer
 uint32_t tick_now, tick_last;
 // Float data of accel and jerk
-float accel[3], accel_last[3], jerk[3];
+float accel[3] = {0.0}, accel_last[3] = {0.0}, jerk[3] = {0.0};
 // Quantization parameters of both models' input
 int32_t zero_point_c;
 int32_t zero_point_p;
@@ -52,6 +62,96 @@ TfLiteStatus SetupAccelerometer(tflite::ErrorReporter *error_reporter,
   begin_index = 0;
   TF_LITE_REPORT_ERROR(error_reporter, "setup done");
   return kTfLiteOk;
+}
+
+void Calibration() {
+  constexpr uint32_t kBatchSize = 500;
+  float accel_buf[3][kBatchSize], jerk_buf[3][kBatchSize];
+
+  // Firstly, collect "kBatchSize" of data with the same LPF and sampling rate
+  for (uint32_t i = 0; i < kBatchSize; ++i) {
+    // To keep the same sampling rate, i.e., the same dt
+    do {
+      available_count = hx_drv_accelerometer_available_count();				
+      for (int j = 0; j < available_count; ++j) {
+        hx_drv_accelerometer_receive(&raw_ax, &raw_ay, &raw_az);
+      }
+      hx_drv_tick_get(&tick_now);  // always read the latest cc
+    } while (tick_now - tick_last < kSamplingCycle);  // Non-blocking delay
+
+    // Not until we have long enough dt will the control flow goes here
+
+    // Data passes LPF first
+    // LPF: Y(n) = (1-ß)*Y(n-1) + ß*X(n) = Y(n-1) - ß(Y(n-1)-X(n));
+    accel[X] = accel[X] - (kLPFBeta * (accel[X] - raw_ax));
+    accel[Y] = accel[Y] - (kLPFBeta * (accel[Y] - raw_ay));
+    accel[Z] = accel[Z] - (kLPFBeta * (accel[Z] - raw_az));
+
+    // Calculating jerk of x, y, z
+    const float dt = (float)(tick_now - tick_last) / (float)kClkRate;
+    jerk[X] = (accel[X] - accel_last[X]) / dt;
+    jerk[Y] = (accel[Y] - accel_last[Y]) / dt;
+    jerk[Z] = (accel[Z] - accel_last[Z]) / dt;
+
+    accel_buf[X][i] = accel[X];
+    accel_buf[Y][i] = accel[Y];
+    accel_buf[Z][i] = accel[Z];
+    jerk_buf[X][i]= jerk[X];
+    jerk_buf[Y][i]= jerk[Y];
+    jerk_buf[Z][i]= jerk[Z];
+
+    // Store the current data for next cycle
+    tick_last = tick_now;
+    accel_last[X] = accel[X];
+    accel_last[Y] = accel[Y];
+    accel_last[Z] = accel[Z];
+  }
+
+  // Secondly, calculate mean and std of the calibration batch 
+  float batch_accel_mean[3] = {0.0}, batch_jerk_mean[3] = {0.0};
+  float batch_accel_var[3] = {0.0}, batch_jerk_var[3] = {0.0};
+
+  // Do it for each axis respectively
+  for (int i = 0; i < 3; ++i) {
+    // Calculating means
+    for (uint32_t j = 0; j < kBatchSize; ++j) {
+      batch_accel_mean[i] += accel_buf[i][j];
+      batch_jerk_mean[i] += jerk_buf[i][j];
+    }
+    batch_accel_mean[i] /= kBatchSize;
+    batch_jerk_mean[i] /= kBatchSize;
+
+    // Calculating standard deviations
+    for (uint32_t j = 0; j < kBatchSize; ++j) {
+      batch_accel_var[i] += powf(accel_buf[i][j] - batch_accel_mean[i], 2);
+      batch_jerk_var[i] += powf(jerk_buf[i][j] - batch_jerk_mean[i], 2);
+    }
+    batch_accel_var[i] = batch_accel_var[i] / kBatchSize;
+    batch_jerk_var[i] =  batch_jerk_var[i] / kBatchSize;
+  }
+
+  // Update the current mean and std
+  // For mean, it is the linear combination of the new one and the old one
+  uint32_t total_count = calibration_count + kBatchSize;
+  for (int i = 0; i < 3; ++i) {
+    accel_std[i] = sqrtf(
+        (calibration_count * powf(accel_mean[i], 2)
+        + kBatchSize * batch_accel_var[i]
+        + calibration_count * kBatchSize * powf(
+            accel_mean[i] - batch_accel_mean[i], 2) / total_count)
+        / total_count);
+    jerk_std[i] = sqrtf(
+        (calibration_count * powf(jerk_mean[i], 2)
+        + kBatchSize * batch_jerk_var[i]
+        + calibration_count * kBatchSize * powf(
+            jerk_mean[i] - batch_jerk_mean[i], 2) / total_count)
+        / total_count);
+    accel_mean[i] = (calibration_count * accel_mean[i]
+        + kBatchSize * batch_accel_mean[i]) / total_count;
+    jerk_mean[i] = (calibration_count * jerk_mean[i]
+        + kBatchSize * batch_jerk_mean[i]) / total_count;
+  }
+  calibration_count = total_count;
 }
 
 bool ReadAccelerometer(int8_t *input_c, int8_t *input_p, int length) {
