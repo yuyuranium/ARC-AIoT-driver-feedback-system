@@ -65,7 +65,7 @@ TfLiteStatus SetupAccelerometer(tflite::ErrorReporter *error_reporter,
 }
 
 void UpdateMeanAndStd(tflite::ErrorReporter *error_reporter, float *mean, float *std) {
-  constexpr uint32_t kBatchSize = 30;
+  constexpr uint32_t kBatchSize = 90;
   float accel_buf[3][kBatchSize], jerk_buf[3][kBatchSize];
 
   // Firstly, collect "kBatchSize" of data with the same LPF and sampling rate
