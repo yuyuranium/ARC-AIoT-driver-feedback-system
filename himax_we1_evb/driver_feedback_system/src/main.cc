@@ -1,8 +1,9 @@
 #include "main_functions.h"
 
 int main(int argc, char* argv[]) {
-  setup();
+  Setup();
   while (true) {
-    loop();
+    // Inference();
+    Calibration();
   }
 }

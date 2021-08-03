@@ -64,8 +64,8 @@ TfLiteStatus SetupAccelerometer(tflite::ErrorReporter *error_reporter,
   return kTfLiteOk;
 }
 
-void Calibration() {
-  constexpr uint32_t kBatchSize = 500;
+void UpdateMeanAndStd(tflite::ErrorReporter *error_reporter, float *mean, float *std) {
+  constexpr uint32_t kBatchSize = 30;
   float accel_buf[3][kBatchSize], jerk_buf[3][kBatchSize];
 
   // Firstly, collect "kBatchSize" of data with the same LPF and sampling rate
@@ -121,13 +121,13 @@ void Calibration() {
     batch_accel_mean[i] /= kBatchSize;
     batch_jerk_mean[i] /= kBatchSize;
 
-    // Calculating standard deviations
+    // Calculating variance of each axis 
     for (uint32_t j = 0; j < kBatchSize; ++j) {
       batch_accel_var[i] += powf(accel_buf[i][j] - batch_accel_mean[i], 2);
       batch_jerk_var[i] += powf(jerk_buf[i][j] - batch_jerk_mean[i], 2);
     }
     batch_accel_var[i] = batch_accel_var[i] / kBatchSize;
-    batch_jerk_var[i] =  batch_jerk_var[i] / kBatchSize;
+    batch_jerk_var[i] = batch_jerk_var[i] / kBatchSize;
   }
 
   // Update the current mean and std
@@ -135,13 +135,13 @@ void Calibration() {
   uint32_t total_count = calibration_count + kBatchSize;
   for (int i = 0; i < 3; ++i) {
     accel_std[i] = sqrtf(
-        (calibration_count * powf(accel_mean[i], 2)
+        (calibration_count * powf(accel_std[i], 2)
         + kBatchSize * batch_accel_var[i]
         + calibration_count * kBatchSize * powf(
             accel_mean[i] - batch_accel_mean[i], 2) / total_count)
         / total_count);
     jerk_std[i] = sqrtf(
-        (calibration_count * powf(jerk_mean[i], 2)
+        (calibration_count * powf(jerk_std[i], 2)
         + kBatchSize * batch_jerk_var[i]
         + calibration_count * kBatchSize * powf(
             jerk_mean[i] - batch_jerk_mean[i], 2) / total_count)
@@ -152,6 +152,18 @@ void Calibration() {
         + kBatchSize * batch_jerk_mean[i]) / total_count;
   }
   calibration_count = total_count;
+  mean[0] = accel_mean[0];
+  mean[1] = accel_mean[1];
+  mean[2] = accel_mean[2];
+  mean[3] = jerk_mean[0];
+  mean[4] = jerk_mean[1];
+  mean[5] = jerk_mean[2];
+  std[0] = accel_std[0];
+  std[1] = accel_std[1];
+  std[2] = accel_std[2];
+  std[3] = jerk_std[0];
+  std[4] = jerk_std[1];
+  std[5] = jerk_std[2];
 }
 
 bool ReadAccelerometer(int8_t *input_c, int8_t *input_p, int length) {

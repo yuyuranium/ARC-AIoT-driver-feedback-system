@@ -58,7 +58,7 @@ int8_t data_buf[6];
 }  // namespace
   
 // The name of this function is important for Arduino compatibility.
-void setup() {
+void Setup() {
   // Set up logging. Google style is to avoid globals or statics because of
   // lifetime uncertainty, but since this has a trivial destructor it's okay.
   static tflite::MicroErrorReporter micro_error_reporter;  // NOLINT
@@ -165,7 +165,32 @@ void setup() {
       quant_detection_threshold);
 }
 
-void loop() {
+void Calibration() {
+  float mean[6], std[6];
+  UpdateMeanAndStd(error_reporter, mean, std);
+  int8_t data_buf[24], begin_index = 0;
+  for (int i = 0; i < 6; ++i) {
+    floatData ff;
+    ff.f_val = mean[i];
+    data_buf[begin_index++] = ff.bytes[0];
+    data_buf[begin_index++] = ff.bytes[1];
+    data_buf[begin_index++] = ff.bytes[2];
+    data_buf[begin_index++] = ff.bytes[3];
+  }
+  TfLiteStatus t1 = I2CSendOutput(data_buf, 24);
+  begin_index = 0;
+  for (int i = 0; i < 6; ++i) {
+    floatData ff;
+    ff.f_val = std[i];
+    data_buf[begin_index++] = ff.bytes[0];
+    data_buf[begin_index++] = ff.bytes[1];
+    data_buf[begin_index++] = ff.bytes[2];
+    data_buf[begin_index++] = ff.bytes[3];
+  }
+  TfLiteStatus t2 = I2CSendOutput(data_buf, 24);
+}
+
+void Inference() {
   // Attempt to read new data from the accelerometer.
   bool got_data = ReadAccelerometer(classifier_input->data.int8,
                                     predictor_input->data.int8,

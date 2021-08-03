@@ -6,9 +6,9 @@
 extern "C" {
 #endif
 
-void setup();
-
-void loop();
+void Setup();
+void Calibration();
+void Inference();
 
 #ifdef __cplusplus
 }
