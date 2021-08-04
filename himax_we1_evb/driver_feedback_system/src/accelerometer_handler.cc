@@ -64,7 +64,7 @@ TfLiteStatus SetupAccelerometer(tflite::ErrorReporter *error_reporter,
   return kTfLiteOk;
 }
 
-void UpdateMeanAndStd(tflite::ErrorReporter *error_reporter, float *mean, float *std) {
+void UpdateMeanAndStd() {
   constexpr uint32_t kBatchSize = 90;
   float accel_buf[3][kBatchSize], jerk_buf[3][kBatchSize];
 
@@ -152,18 +152,6 @@ void UpdateMeanAndStd(tflite::ErrorReporter *error_reporter, float *mean, float 
         + kBatchSize * batch_jerk_mean[i]) / total_count;
   }
   calibration_count = total_count;
-  mean[0] = accel_mean[0];
-  mean[1] = accel_mean[1];
-  mean[2] = accel_mean[2];
-  mean[3] = jerk_mean[0];
-  mean[4] = jerk_mean[1];
-  mean[5] = jerk_mean[2];
-  std[0] = accel_std[0];
-  std[1] = accel_std[1];
-  std[2] = accel_std[2];
-  std[3] = jerk_std[0];
-  std[4] = jerk_std[1];
-  std[5] = jerk_std[2];
 }
 
 bool ReadAccelerometer(int8_t *input_c, int8_t *input_p, int length) {

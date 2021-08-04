@@ -16,12 +16,12 @@ float predicted_value[3] = {0.0};
 // Store the state information to know what to do now
 int8_t current_state = 0;
 // The accumulated error and number of accumulated of a given strong state
-float accumulated_error_sq;
-int n_accumulated;
+float accumulated_error_sq[3] = {0.0};
+int n_accumulated = 0.0;
 }  // namespace
 
-bool EvaluateError(float *error, int8_t state,
-                   float *prediction, float *actual) {
+bool EvaluateMSE(float *mse, int8_t state,
+                 float *prediction, float *actual) {
   // Update shift error buffer with latest data
   // Calculate the difference between previous prediction and the actual value
   shift_error_buffer[X][begin_index] = actual[X] - predicted_value[X]; 
@@ -35,12 +35,22 @@ bool EvaluateError(float *error, int8_t state,
     begin_index = 0;
   }
 
-  // If state is changed, then calculate the average error of the previous state
-  if (state != current_state && n_accumulated > 0) {
-    *error = accumulated_error_sq / (float)n_accumulated;
-    accumulated_error_sq = 0.0;
-    n_accumulated = 0;
+  // If state is changed, then calculate the average mse of the previous state
+  // or the state lasts over 2 minutes, for the concern of buffer overflow,
+  // also calculate the mse
+  if ((state != current_state && n_accumulated > 0) || n_accumulated > 4800) {
+    mse[X] = accumulated_error_sq[X] / (float)n_accumulated;
+    mse[Y] = accumulated_error_sq[Y] / (float)n_accumulated;
+    mse[Z] = accumulated_error_sq[Z] / (float)n_accumulated;
+    accumulated_error_sq[X] = 0.0;
+    accumulated_error_sq[Y] = 0.0;
+    accumulated_error_sq[Z] = 0.0;
     current_state = state;
+
+    // State interval less than 1 second is not worth trusting
+    if (n_accumulated < 40) return false;
+
+    n_accumulated = 0;
     return true;
   }
 
@@ -57,8 +67,9 @@ bool EvaluateError(float *error, int8_t state,
     case 9:
     case 10:
     case 14:
-      accumulated_error_sq += SQ(shift_error_buffer[X][tail_index]);
-      accumulated_error_sq += SQ(shift_error_buffer[Z][tail_index]);
+      accumulated_error_sq[X] += SQ(shift_error_buffer[X][tail_index]);
+      accumulated_error_sq[Y] += SQ(shift_error_buffer[Y][tail_index]);
+      accumulated_error_sq[Z] += SQ(shift_error_buffer[Z][tail_index]);
       ++n_accumulated;
       break;
     // For left turn (11) and right turn (12)
@@ -66,20 +77,23 @@ bool EvaluateError(float *error, int8_t state,
     // UPDATE: Evaluate the direction of up and down as well
     case 11:
     case 12:
-      accumulated_error_sq += SQ(shift_error_buffer[Y][tail_index]);
-      accumulated_error_sq += SQ(shift_error_buffer[Z][tail_index]);
+      accumulated_error_sq[X] += SQ(shift_error_buffer[X][tail_index]);
+      accumulated_error_sq[Y] += SQ(shift_error_buffer[Y][tail_index]);
+      accumulated_error_sq[Z] += SQ(shift_error_buffer[Z][tail_index]);
       ++n_accumulated;
       break;
     // For cruise (13)
     // Evaluate all directions
     case 13:
-      accumulated_error_sq += SQ(shift_error_buffer[X][tail_index]);
-      accumulated_error_sq += SQ(shift_error_buffer[Y][tail_index]);
-      accumulated_error_sq += SQ(shift_error_buffer[Z][tail_index]);
+      accumulated_error_sq[X] += SQ(shift_error_buffer[X][tail_index]);
+      accumulated_error_sq[Y] += SQ(shift_error_buffer[Y][tail_index]);
+      accumulated_error_sq[Z] += SQ(shift_error_buffer[Z][tail_index]);
       ++n_accumulated;
       break;
     default:
-      accumulated_error_sq = 0.0;
+      accumulated_error_sq[X] = 0.0;
+      accumulated_error_sq[Y] = 0.0;
+      accumulated_error_sq[Z] = 0.0;
       n_accumulated = 0;
       break;
   }

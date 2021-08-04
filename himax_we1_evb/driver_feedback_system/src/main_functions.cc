@@ -8,6 +8,7 @@
 #include "state_machine_handler.h"
 #include "motion_detector.h"
 #include "error_evaluation_handler.h"
+#include "grading_handler.h"
 #include "i2c_output_handler.h"
 
 #include "tensorflow/lite/micro/micro_error_reporter.h"
@@ -53,8 +54,9 @@ typedef union {
   float f_val;
   uint8_t bytes[sizeof(float)];
 } floatData;
+int8_t prev_state = 0;
 // Data buffer for i2c transmission
-int8_t data_buf[6];
+int8_t data_buf[5];
 }  // namespace
   
 // The name of this function is important for Arduino compatibility.
@@ -69,8 +71,7 @@ void Setup() {
   classifier = tflite::GetModel(classifier_tflite);
   if (classifier->version() != TFLITE_SCHEMA_VERSION) {
     TF_LITE_REPORT_ERROR(error_reporter,
-                         "Model provided is schema version %d not equal "
-                         "to supported version %d.",
+                         "Model provided is schema version %d not equal " "to supported version %d.",
                          classifier->version(), TFLITE_SCHEMA_VERSION);
     return;
   }
@@ -152,42 +153,11 @@ void Setup() {
   if (i2c_setup_status != kTfLiteOk) {
     TF_LITE_REPORT_ERROR(error_reporter, "i2c set up failed\n");
   }
-  
-  // Setup the state machine
-  TfLiteStatus state_machine_status = SetupStateMachine(error_reporter);
-  if (state_machine_status != kTfLiteOk) {
-    TF_LITE_REPORT_ERROR(error_reporter, "state machine set up failed\n");
-  }
 
   TF_LITE_REPORT_ERROR(
       error_reporter,
       "Starting inferencing with quantized detection threshold: %d",
       quant_detection_threshold);
-}
-
-void Calibration() {
-  float mean[6], std[6];
-  UpdateMeanAndStd(error_reporter, mean, std);
-  int8_t data_buf[24], begin_index = 0;
-  for (int i = 0; i < 6; ++i) {
-    floatData ff;
-    ff.f_val = mean[i];
-    data_buf[begin_index++] = ff.bytes[0];
-    data_buf[begin_index++] = ff.bytes[1];
-    data_buf[begin_index++] = ff.bytes[2];
-    data_buf[begin_index++] = ff.bytes[3];
-  }
-  TfLiteStatus t1 = I2CSendOutput(data_buf, 24);
-  begin_index = 0;
-  for (int i = 0; i < 6; ++i) {
-    floatData ff;
-    ff.f_val = std[i];
-    data_buf[begin_index++] = ff.bytes[0];
-    data_buf[begin_index++] = ff.bytes[1];
-    data_buf[begin_index++] = ff.bytes[2];
-    data_buf[begin_index++] = ff.bytes[3];
-  }
-  TfLiteStatus t2 = I2CSendOutput(data_buf, 24);
 }
 
 void Inference() {
@@ -216,11 +186,9 @@ void Inference() {
   int8_t motion = DetectMotion(classifier_output->data.int8);
 
   // Obtain state after transition
-  uint8_t state = StateTransition(motion);
+  int8_t state = StateTransition(motion);
 
-  float actual[3], prediction[3];
-  floatData error;
-  error.f_val = 0.0;
+  float actual[3], prediction[3], mse[3] = {0.0};
 
   // Retrieve data from prediction result and pass them to evaluation handler
   prediction[X] =
@@ -234,22 +202,29 @@ void Inference() {
       * predictor_output->params.scale;
   GetLatestAccel(actual);
 
-  bool got_evaluation = EvaluateError(&error.f_val, state, prediction, actual);
+  bool got_mse = EvaluateMSE(mse, state, prediction, actual);
 
   // Send float value of error and state to arduino via i2c
-  data_buf[0] = error.bytes[0];
-  data_buf[1] = error.bytes[1];
-  data_buf[2] = error.bytes[2];
-  data_buf[3] = error.bytes[3];
-  data_buf[4] = state;    // Put current state on the second last byte
-  data_buf[5] = motion;   // Put detected motion on the last byte
-  TfLiteStatus transmit_status = I2CSendOutput(data_buf, 6);
+  data_buf[0] = state;    // Put current state on the second last byte
+  data_buf[1] = motion;   // Put detected motion on the last byte
 
-  if (got_evaluation) {
-    TF_LITE_REPORT_ERROR(error_reporter, "got evaluation");
+  TfLiteStatus transmit_status;
+  if (got_mse) {
+    uint8_t grading[3];
+    Grade(grading, mse, prev_state);
+    data_buf[2] = grading[0];
+    data_buf[3] = grading[1];
+    data_buf[4] = grading[2];
+    transmit_status = I2CSendOutput(data_buf, 5);
+    TF_LITE_REPORT_ERROR(error_reporter, "got evaluation: %d, %d, %d",
+                         grading[0], grading[1], grading[2]);
+  } else {
+    transmit_status = I2CSendOutput(data_buf, 2);
   }
 
   if (transmit_status != kTfLiteOk) {
     TF_LITE_REPORT_ERROR(error_reporter, "Cannot transmit\n");
   }
+
+  prev_state = state;
 }

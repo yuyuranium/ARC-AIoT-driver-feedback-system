@@ -7,7 +7,6 @@ extern "C" {
 #endif
 
 void Setup();
-void Calibration();
 void Inference();
 
 #ifdef __cplusplus

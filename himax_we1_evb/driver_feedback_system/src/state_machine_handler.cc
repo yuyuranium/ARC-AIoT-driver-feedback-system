@@ -4,7 +4,7 @@
 
 namespace {
 // The transition table
-constexpr uint8_t kTransitionTable[kStates][kMotions] = {
+constexpr int8_t kTransitionTable[kStates][kMotions] = {
   { 1, 15, 15, 15, 15, 15 },  //  0: "initial",
   { 8,  6,  2,  3,  4,  5 },  //  1: "w-idle",
   { 1,  6,  9,  3,  4,  5 },  //  2: "w-start-off",
@@ -23,7 +23,7 @@ constexpr uint8_t kTransitionTable[kStates][kMotions] = {
   { 1, 15, 15, 15, 15, 15 },  // 15: "pending"
 };
 // Current state of the vehicle
-uint8_t state = 0;
+int8_t state = 0;
 // The history of transitions using ring buffer structure
 uint8_t transition_history[kTransitionHistoryLength] = {0};
 // The head to the transition history
@@ -34,18 +34,7 @@ int8_t current_motion = -1;
 int8_t motion_accumulator = 0;
 }  // namespace
 
-
-TfLiteStatus SetupStateMachine(tflite::ErrorReporter *error_reporter) {
-  TF_LITE_REPORT_ERROR(error_reporter, "setting up state machine");
-  current_motion = -1;
-  motion_accumulator = 0;
-  begin_index = 0;
-  state = 0;
-  TF_LITE_REPORT_ERROR(error_reporter, "setup done");
-  return kTfLiteOk;
-}
-
-uint8_t StateTransition(int8_t motion) {
+int8_t StateTransition(int8_t motion) {
   // Not doing anything when detection is unknown
   if (motion == -1) return state;
 

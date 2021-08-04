@@ -6,8 +6,8 @@
 
 extern TfLiteStatus SetupEvaluationParameters(
     tflite::ErrorReporter *error_reporter);
-extern bool EvaluateError(float *error, int8_t state,
-                          float *prediction, float *actual);
+extern bool EvaluateMSE(float *mse, int8_t state,
+                        float *prediction, float *actual);
 
 #endif  // EVALUATION_HANDLER_H_
 
