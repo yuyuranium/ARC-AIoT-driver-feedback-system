@@ -8,7 +8,7 @@
 #define BTSERIAL_BAUD 38400
 
 #define kInstGradingDuration 3000  // 3 seconds
-#define kDebounceDuration 200      // 200 ms
+#define kDebounceDuration 600      // 600 ms
 
 #define P 0
 #define U 1
@@ -219,7 +219,7 @@ void loop() {
           LCDShowTotalGrading(reviewing_state);
           return;
 
-        // R is to go for detail of the state, if there exists grading
+        // R is to go for details of the state, if there exists grading
         case R:
           if (total_grading_counts[reviewing_state]) {
             mode = COMMENT_MODE;
@@ -283,19 +283,8 @@ void loop() {
           LCDShowAxisComment(reviewing_state, comment_axis);
           return;
       }
+      return;
     }
-    break;
-  }
-}
-
-inline void ShowArrow() {
-  lcd.setCursor(12, 1);
-  lcd.print(arrow);
-}
-
-inline void ResetArrow() {
-  for (uint8_t i = 0; i < 4; ++i) {
-    arrow[i] = ' ';
   }
 }
 
@@ -303,7 +292,8 @@ void LCDShowAxisComment(uint8_t reviewing_state, uint8_t comment_axis) {
   char comment_path[20], line1[17], line2[17];
   uint8_t sel = 0;
   uint8_t star10 = (uint8_t)round(FixedToFloat(
-      total_gradings[reviewing_state][comment_axis] / total_grading_counts[reviewing_state]) * 50);
+      total_gradings[reviewing_state][comment_axis]
+      / total_grading_counts[reviewing_state]) * 50);
   if (star10 >= 45) {
     LCDShowMsg("<Excellent!", " Try to keep it");
     return;
@@ -314,7 +304,8 @@ void LCDShowAxisComment(uint8_t reviewing_state, uint8_t comment_axis) {
   } else if (star10 >= 0) {
     sel = 2;
   }
-  sprintf(comment_path, "COMMENTS/%d%d%d.TXT", reviewing_state, sel, comment_axis);
+  sprintf(comment_path, "COMMENTS/%d%d%d.TXT",
+          reviewing_state, sel, comment_axis);
   File comment_file = SD.open(comment_path);
   comment_file.read(line1, 16);
   comment_file.read(line2, 16);
@@ -329,12 +320,15 @@ void LCDShowAxisGrading(uint8_t reviewing_state, uint8_t comment_axis) {
   ResetArrow();
   arrow[0] = '<';
   arrow[3] = '>';
+  // Can go up
   if (comment_axis != X)
     arrow[1] = 'U';
+  // Can go down
   if (comment_axis != Z)
     arrow[2] = 'D';
   uint8_t star10 = (uint8_t)round(FixedToFloat(
-      total_gradings[reviewing_state][comment_axis] / total_grading_counts[reviewing_state]) * 50);
+      total_gradings[reviewing_state][comment_axis]
+      / total_grading_counts[reviewing_state]) * 50);
   uint8_t i_part = star10 / 10;
   uint8_t f_part = star10 % 10;
   sprintf(grading_msg, "Grade: %d.%d", i_part, f_part);
@@ -351,14 +345,15 @@ void LCDShowTotalGrading(uint8_t reviewing_state) {
   // Can go down
   if (reviewing_state != ACCEL)
     arrow[2] = 'D';
-  // If there exists grading for the state, then it can go right to comment mode
-  // and need to calculate the average of the grading
+  // If there exists grading for the state, then it can go right to
+  // comment mode and need to calculate the average of the grading
   if (total_grading_counts[reviewing_state]) {
     arrow[3] = '>';
     uint8_t star10[3], avg_star10 = 0, min_index = 0;
     for (uint8_t i = 0; i < 3; ++i) {
       star10[i] = (uint8_t)round(FixedToFloat(
-          total_gradings[reviewing_state][i] / total_grading_counts[reviewing_state]) * 50);
+          total_gradings[reviewing_state][i]
+          / total_grading_counts[reviewing_state]) * 50);
       if (star10[i] < star10[min_index]) {
         min_index = i;
       }
@@ -367,11 +362,13 @@ void LCDShowTotalGrading(uint8_t reviewing_state) {
     avg_star10 += (star10[min_index] >> 2);
     uint8_t i_part = avg_star10 / 10;
     uint8_t f_part = avg_star10 % 10;
-    sprintf(grading_msg, "%s: %d.%d", kGradingStateNames[reviewing_state], i_part, f_part);
+    sprintf(grading_msg, "%s: %d.%d",
+            kGradingStateNames[reviewing_state], i_part, f_part);
   } else {
     sprintf(grading_msg, "%s: N/A", kGradingStateNames[reviewing_state]);
   }
-  sprintf(grading_count_msg, "Total: %d", total_grading_counts[reviewing_state]);
+  sprintf(grading_count_msg, "Total: %d",
+          total_grading_counts[reviewing_state]);
   LCDShowMsg(grading_msg, grading_count_msg);
   ShowArrow();
 }
@@ -383,8 +380,30 @@ void LCDShowStateAndMsg(int8_t state, int8_t motion, char *msg) {
     motion_symbol = '.';
   else
     motion_symbol = kMotionSymbols[motion];
-  sprintf(state_and_motion, "%-14s%-2c", kStateNames[state], motion_symbol);
+  sprintf(state_and_motion, "%-14s%c ", kStateNames[state], motion_symbol);
   LCDShowMsg(state_and_motion, msg);
+}
+
+inline void ShowArrow() {
+  lcd.setCursor(12, 1);
+  lcd.print(arrow);
+}
+
+inline void ResetArrow() {
+  for (uint8_t i = 0; i < 4; ++i) {
+    arrow[i] = ' ';
+  }
+}
+
+void LCDShowMsg(char *row1, char *row2) {
+  const char *format = "%-16s";
+  char buf[17];
+  sprintf(buf, format, row1);
+  lcd.setCursor(0, 0);
+  lcd.print(buf);
+  sprintf(buf, format, row2);
+  lcd.setCursor(0, 1);
+  lcd.print(buf);
 }
 
 int8_t ReadJoyStick() {
@@ -429,8 +448,7 @@ void ReceiveEvent(int count) {
     uint8_t i_part = star10 / 10;
     uint8_t f_part = star10 % 10;
     sprintf(inst_grading_msg, "%s: %d.%d",
-            kGradingStateNames[grading_state],
-            i_part, f_part);
+            kGradingStateNames[grading_state], i_part, f_part);
     show_inst_grading_tick = millis();
     state_or_motion_changed = true;
   }
@@ -445,17 +463,6 @@ void ReceiveEvent(int count) {
   
 }
 
-void LCDShowMsg(char *row1, char *row2) {
-  const char *format = "%-16s";
-  char buf[17];
-  sprintf(buf, format, row1);
-  lcd.setCursor(0, 0);
-  lcd.print(buf);
-  sprintf(buf, format, row2);
-  lcd.setCursor(0, 1);
-  lcd.print(buf);
-}
-
 inline float FixedToFloat(uint8_t f) {
   return (float)f / kQuantScale;
 }
@@ -466,7 +473,6 @@ bool JoyStickDebounce() {
     joystick_trigger_time = now;
     return true;
   } else {
-    joystick_trigger_time = now;
     return false;
   }
 }
