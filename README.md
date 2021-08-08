@@ -239,6 +239,7 @@ The state information is display as:
 | Braking (or coming to a halt) | `[Brake]`     | ` Brake?`     |
 | Turning left                  | `[Left]`      | ` Left?`      |
 | Turning right                 | `[Right]`     | ` Right?`     |
+| Cruise                        | `[Cruise]`    | ` Cruise?`    |
 | Speeding up (Acceleration)    | `[Accel]`     | ` Accel?`     |
 
 The detected motion or movement is display as:
