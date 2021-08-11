@@ -17,18 +17,18 @@ constexpr uint8_t kRight = 5;
 // Consts obtained from training phase
 constexpr int kSteps = 30;
 constexpr float kAccelMean[3] = {
-  0.9572375414426996, 0.012870309508895035, -0.0278956020587236 };
+  0.9569233989958942, 0.013474283870207656, -0.013631698874467501 };
 constexpr float kJerkMean[3] = {
-  0.0004580301914796934, 0.0007405162553078224, 0.012318304740119934 };
+  0.0005011723938845438, 0.001576811732740949, 0.008756530947382475 };
 constexpr float kAccelStd[3] = {
-  0.03648254431044691, 0.10694366078089648, 0.09455331861316113 };
+  0.03043855586863038, 0.0975338627323963, 0.08715879145312343 };
 constexpr float kJerkStd[3] = {
-  0.792294015927371, 0.6213015301790688, 0.7008286966902062 };
+  0.6788996939235906, 0.5475977123303466, 0.6220835815551232 };
 
 // Confidence and length of history for motion detection
-constexpr float kDetectionConfidenceThreshold = 0.78;
-constexpr int kDetectionHistoryLength = 9;
-constexpr int kTransitionMotinoAccumulatorThreshold = 7;
+constexpr float kDetectionConfidenceThreshold = 0.72;
+constexpr int kDetectionHistoryLength = 18;
+constexpr int kTransitionMotinoAccumulatorThreshold = 9;
 constexpr int kTransitionHistoryLength = 10;
 constexpr int kDiffBufferPadding = 9;
 

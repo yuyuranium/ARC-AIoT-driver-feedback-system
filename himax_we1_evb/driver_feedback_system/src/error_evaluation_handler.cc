@@ -48,7 +48,7 @@ bool EvaluateMSE(float *mse, int8_t state,
     current_state = state;
 
     // State interval less than 1 second is not worth trusting
-    if (n_accumulated < 40) return false;
+    if (n_accumulated < 60) return false;
 
     n_accumulated = 0;
     return true;
@@ -60,42 +60,16 @@ bool EvaluateMSE(float *mse, int8_t state,
     tail_index = 0;
   }
 
-  switch (state) {
-    // For start off (9), accelerate (14) and brake (10)
-    // Evaluate only the directions of back and forth, which is Z direction
-    // UPDATE: Evaluate the direction of up and down as well
-    case 9:
-    case 10:
-    case 14:
-      accumulated_error_sq[X] += SQ(shift_error_buffer[X][tail_index]);
-      accumulated_error_sq[Y] += SQ(shift_error_buffer[Y][tail_index]);
-      accumulated_error_sq[Z] += SQ(shift_error_buffer[Z][tail_index]);
-      ++n_accumulated;
-      break;
-    // For left turn (11) and right turn (12)
-    // Evaluate directions of left and right only, which is Y direction
-    // UPDATE: Evaluate the direction of up and down as well
-    case 11:
-    case 12:
-      accumulated_error_sq[X] += SQ(shift_error_buffer[X][tail_index]);
-      accumulated_error_sq[Y] += SQ(shift_error_buffer[Y][tail_index]);
-      accumulated_error_sq[Z] += SQ(shift_error_buffer[Z][tail_index]);
-      ++n_accumulated;
-      break;
-    // For cruise (13)
-    // Evaluate all directions
-    case 13:
-      accumulated_error_sq[X] += SQ(shift_error_buffer[X][tail_index]);
-      accumulated_error_sq[Y] += SQ(shift_error_buffer[Y][tail_index]);
-      accumulated_error_sq[Z] += SQ(shift_error_buffer[Z][tail_index]);
-      ++n_accumulated;
-      break;
-    default:
-      accumulated_error_sq[X] = 0.0;
-      accumulated_error_sq[Y] = 0.0;
-      accumulated_error_sq[Z] = 0.0;
-      n_accumulated = 0;
-      break;
+  if (state >= 9 && state <= 14) {
+    accumulated_error_sq[X] += SQ(shift_error_buffer[X][tail_index]);
+    accumulated_error_sq[Y] += SQ(shift_error_buffer[Y][tail_index]);
+    accumulated_error_sq[Z] += SQ(shift_error_buffer[Z][tail_index]);
+    ++n_accumulated;
+  } else {
+    accumulated_error_sq[X] = 0.0;
+    accumulated_error_sq[Y] = 0.0;
+    accumulated_error_sq[Z] = 0.0;
+    n_accumulated = 0;
   }
 
   current_state = state;

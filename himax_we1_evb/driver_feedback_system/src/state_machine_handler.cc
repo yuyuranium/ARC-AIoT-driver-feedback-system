@@ -6,7 +6,7 @@ namespace {
 // The transition table
 constexpr int8_t kTransitionTable[kStates][kMotions] = {
   { 1, 15, 15, 15, 15, 15 },  //  0: "initial",
-  { 8,  6,  2,  3,  4,  5 },  //  1: "w-idle",
+  { 8,  1,  2,  3,  4,  5 },  //  1: "w-idle",
   { 1,  6,  9,  3,  4,  5 },  //  2: "w-start-off",
   { 1,  6,  7, 10,  4,  5 },  //  3: "w-brake",
   { 1,  6,  7,  3, 11,  5 },  //  4: "w-left",
