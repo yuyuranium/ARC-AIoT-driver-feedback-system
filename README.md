@@ -29,6 +29,8 @@ Our goal is to provide the users an objected way to analyze their steering style
 
 ![](./img/IMG_2834.PNG)
 
+![](./img/IMG_2906.PNG)
+
 ## Hardware / Software Setup
 
 ### System Overview
@@ -79,11 +81,9 @@ Our goal is to provide the users an objected way to analyze their steering style
   * To detect Up / Down / Left / Right / Press / Release operations from the user
   
 * **SD Card Module**
-
-  * To record the grading history (TBD)
-
-* **CP2102 Micro USB to TTL Module (optional)**
-
+  * Store comment for given driving behaviors
+  
+* **CP2102 Micro USB to TTL Module**
   * Connected with Micro USB to supply power to the system
   * 5V for Arduino
   * 3.3V for Himax WE-I Plus EVB
@@ -185,15 +185,15 @@ If you have a problem burning the program to Arduino Pro Mini, google it to find
 
   After that we retrieve the output from the classifier model, determine the class of motion of highest possibility and update the state machine with the outcome. Transition is triggered whenever some identical classes of a motion occurs consecutively.
 
-  As for predictor, it outputs the predicted value of acceleration of the next cycle. Therefore, we would store the output and wait for the acceleration data of the next cycle. As soon as we get the two, we calculate the difference between them, called error. Within a state, the program accumulate the error,  compute the mean square error (MSE) and transmit the information to Arduino via i2c.
+  As for predictor, it outputs the predicted value of acceleration of the next cycle. Therefore, we would store the output and wait for the acceleration data of the next cycle. As soon as we get the two, we calculate the difference between them, called error. Within a state, the program accumulates the error,  compute the mean square error (MSE) and passes the result to the grading system. The grading system uses the 3-axis MSE as a basis for computing the scores of each class of motion. The smaller the error is, the higher the score would be.
+
+  ![](./img/grading.png)
 
 * **Arduino**
 
-  The Arduino retrieves and resolves the data from i2c and displays all the information on the LCD display. By the way, the display is connected as a i2c slave and Arduino would communicate with it using digital pins to simulate i2c signals for the reason that Arduino has already been a slave device when communicating with Himax  WE-I Plus EVB.
+  The Arduino retrieves and resolves the data from i2c and displays all the information on the LCD display. By the way, the LCD display is connected as a i2c slave and Arduino would communicate with it using digital pins to simulate i2c signals for the reason that Arduino has already been a slave device when communicating with Himax  WE-I Plus EVB.
 
-  Besides displaying information on the display, the Arduino would also listen to user inputs and do the corresponding feedback, such as selecting what to display.
-
-  The grading system is integrated in the program of Arduino, using the MSE from Himax WE-I Plus EVB as a basis for computing the scores of each class of motion. The smaller the error is, the higher the score would be.
+  Besides displaying real time information on the display, the Arduino would also listen to user inputs and do the corresponding feedback, such as selecting what to display.
 
   Arduino also gives comments on all the classes of motion according to the score you get. For example, if you got a high score, it would compliment you. However, if you got a poor grade, it would consider you as a Sambao.
 
@@ -270,19 +270,24 @@ LCD:
     Push up ^ |
             | | Push down
             | v
-    +-----------------+   Push right   +-----------------+
-    | $Brake: 4.5     | -------------> |<Very good!      |
-    | Total: 87   UD> | <------------- | Try to keep it  |
-    +-----------------+   Push left    +-----------------+
-    Push up ^ |
-            | | Push down
-            | v
-    +-----------------+   Push right   +-----------------+
-    | $Left: 0.4      | -------------> |<You may be      |
-    | Total: 3    UD> | <------------- | a Sambao        |
-    +-----------------+   Push left    +-----------------+
-            | |
-      ...
+    +-----------------+   Push right   +-----------------+   Push right   +-----------------+
+    | $Brake: 4.5     | -------------> | @pavement       | -------------> | <       |
+    | Total: 87   UD> | <------------- | Grading: 4.4    | <------------- | Grading: 4.4    |
+    +-----------------+   Push left    +-----------------+   Push left    +-----------------+
+    Push up ^ |                        Push up ^ |
+            | | Push down                      | | Push down
+            | v                                | v
+    +-----------------+                +-----------------+   Push right   +-----------------+
+    | $Left: 0.4      |                | @steering       | -------------> | <       |
+    | Total: 3    UD> |                | Grading: 4.3    | <------------- | Grading: 4.4    |
+    +-----------------+                +-----------------+   Push left    +-----------------+
+            | |                        Push up ^ |          
+    ...                                        | | Push down
+                                               | v          
+                                       +-----------------+  
+                                       | @accel-decel    |  
+                                       | Grading: 4.7    |  
+                                       +-----------------+  
       
     "$Start-off" or "$Brake", etc: The class of driving state currently reviewing
     "N/A": The state has not been graded.
