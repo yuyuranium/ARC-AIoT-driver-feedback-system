@@ -271,25 +271,26 @@ LCD:
             | | Push down
             | v
     +-----------------+   Push right   +-----------------+   Push right   +-----------------+
-    | $Brake: 4.5     | -------------> | @pavement       | -------------> | <       |
-    | Total: 87   UD> | <------------- | Grading: 4.4    | <------------- | Grading: 4.4    |
+    | $Brake: 4.5     | -------------> | @pavement       | -------------> | <Avoid driving  |
+    | Total: 87   UD> | <------------- | Grading: 4.4    | <------------- |  on road bumps  |
     +-----------------+   Push left    +-----------------+   Push left    +-----------------+
     Push up ^ |                        Push up ^ |
             | | Push down                      | | Push down
             | v                                | v
     +-----------------+                +-----------------+   Push right   +-----------------+
-    | $Left: 0.4      |                | @steering       | -------------> | <       |
-    | Total: 3    UD> |                | Grading: 4.3    | <------------- | Grading: 4.4    |
+    | $Left: 0.4      |                | @steering       | -------------> | <Hold the SGW   |
+    | Total: 3    UD> |                | Grading: 4.3    | <------------- |  more tightly   |
     +-----------------+                +-----------------+   Push left    +-----------------+
             | |                        Push up ^ |          
     ...                                        | | Push down
                                                | v          
                                        +-----------------+  
-                                       | @accel-decel    |  
-                                       | Grading: 4.7    |  
+                                       | @accel-decel    | ---
+                                       | Grading: 4.7    | <-- ... 
                                        +-----------------+  
       
     "$Start-off" or "$Brake", etc: The class of driving state currently reviewing
+    "@pavement" or "@steering" or "@accel-decel": The class of directional grading of a state
     "N/A": The state has not been graded.
     "4.5" or "0.4": The average score you have got for the class of driving state
     "Total: 87": 87 occurrences of the class have been detected and graded
