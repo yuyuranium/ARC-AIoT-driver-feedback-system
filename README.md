@@ -81,7 +81,7 @@ Our goal is to provide the users an objected way to analyze their steering style
   * To detect Up / Down / Left / Right / Press / Release operations from the user
   
 * **SD Card Module**
-  * Store comment for given driving behaviors
+  * Store comments for given driving behaviors
   
 * **CP2102 Micro USB to TTL Module**
   * Connected with Micro USB to supply power to the system
